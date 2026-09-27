@@ -13,14 +13,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SystemicSalienceContractTest {
     @Test
-    void dietKeepsItsNativeScreen() throws IOException {
+    void dietUsesTheFullGuideScreen() throws IOException {
         Path clientRoot = Path.of("src/main/java/com/bettercontent/systemicsalience/client");
-        String stateEvents = Files.readString(clientRoot.resolve("ClientStateEvents.java"));
+        String opening = Files.readString(clientRoot.resolve("DietScreenEvents.java"));
 
-        assertFalse(Files.exists(clientRoot.resolve("SystemicDietScreen.java")));
-        assertFalse(Files.exists(clientRoot.resolve("DietScreenEvents.java")));
-        assertFalse(stateEvents.contains("ScreenEvent.Opening"));
-        assertFalse(stateEvents.contains("setNewScreen"));
+        assertTrue(Files.exists(clientRoot.resolve("SystemicDietScreen.java")));
+        assertTrue(opening.contains("ScreenEvent.Opening"));
+        assertTrue(opening.contains("setNewScreen"));
+        assertFalse(Files.exists(clientRoot.resolve("DietBenefitsOverlay.java")));
     }
 
     @Test

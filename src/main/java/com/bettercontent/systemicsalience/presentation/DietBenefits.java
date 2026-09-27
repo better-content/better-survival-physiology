@@ -1,10 +1,13 @@
 package com.bettercontent.systemicsalience.presentation;
 
 import com.bettercontent.systemicsalience.network.MetabolicSyncPacket;
+import java.util.List;
 
 /** Player-facing promises for the eight Diet rows; gameplay thresholds use the same tiers. */
 public final class DietBenefits {
     private DietBenefits() {}
+
+    public record GuideTier(String threshold, float value, String effect, boolean current) {}
 
     public static float value(MetabolicSyncPacket state, AspectIdentity aspect) {
         return switch (aspect) {
@@ -62,4 +65,24 @@ public final class DietBenefits {
             default -> aspect.representative + ": " + effect(aspect, NutritionTier.PREPARED);
         };
     }
+
+    /** All visible steps for one Diet group, including the current step. */
+    public static List<GuideTier> guide(AspectIdentity aspect, MetabolicSyncPacket state) {
+        float value = value(state, aspect);
+        if (aspect == AspectIdentity.TEMPO) return List.of(
+                new GuideTier("25%", .25f, "Tempo I: cadence +50%; upper nutrition burns 2x", value >= .25f && value < .60f),
+                new GuideTier("60%", .60f, "Tempo II: cadence +100%; upper nutrition burns 5x", value >= .60f),
+                new GuideTier("Debt", -1, "Sugar builds debt; a crash slows recovery", value < .25f && state.debt() >= .25f));
+        if (aspect == AspectIdentity.CONTROL) return List.of(
+                new GuideTier("35–65%", .35f, "Composed: steadier aim", value >= .35f && value <= .65f),
+                new GuideTier(">65%", .65f, "Impaired: slower attacks and poor handling", value > .65f && value < .90f),
+                new GuideTier("90%", .90f, "Severe impairment: slow attacks and stumbles", value >= .90f));
+        NutritionTier tier = NutritionTier.of(value, state.ordinary(), state.prepared(), state.feast());
+        return List.of(
+                new GuideTier(percent(state.ordinary()), state.ordinary(), effect(aspect, NutritionTier.SUPPORTED), tier == NutritionTier.SUPPORTED),
+                new GuideTier(percent(state.prepared()), state.prepared(), effect(aspect, NutritionTier.PREPARED), tier == NutritionTier.PREPARED),
+                new GuideTier(percent(state.feast()), state.feast(), effect(aspect, NutritionTier.FEAST), tier == NutritionTier.FEAST));
+    }
+
+    private static String percent(float value) { return Math.round(value * 100) + "%"; }
 }

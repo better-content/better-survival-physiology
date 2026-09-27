@@ -10,8 +10,7 @@
     "ThirstExhaustionMixin"
   ],
   "client": [
-    "DietScreenAccessor",
-    "DietScreenOrderMixin"
+    "DietScreenAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
