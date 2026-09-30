@@ -43,7 +43,7 @@ public final class GenerateNutritionIcons {
             }
             overlayGlyph(output, index);
         }
-        Path target = root.resolve("src/main/resources/assets/systemic_salience/textures/gui/nutrition_states.png");
+        Path target = root.resolve("src/main/resources/assets/better_survival_physiology/textures/gui/nutrition_states.png");
         ImageIO.write(output, "png", target.toFile());
         System.out.println("wrote " + target);
     }

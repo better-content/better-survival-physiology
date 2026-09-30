@@ -1,0 +1,11 @@
+{
+  "aspect.impact": { "sounds": ["better_survival_physiology:aspect/impact"] },
+  "aspect.tempo": { "sounds": ["better_survival_physiology:aspect/tempo"] },
+  "aspect.work": { "sounds": ["better_survival_physiology:aspect/work"] },
+  "aspect.mobility": { "sounds": ["better_survival_physiology:aspect/mobility"] },
+  "aspect.endurance": { "sounds": ["better_survival_physiology:aspect/endurance"] },
+  "aspect.robustness": { "sounds": ["better_survival_physiology:aspect/robustness"] },
+  "aspect.renewal": { "sounds": ["better_survival_physiology:aspect/renewal"] },
+  "aspect.control": { "sounds": ["better_survival_physiology:aspect/control"] },
+  "aspect.tempo_broken": { "sounds": ["better_survival_physiology:aspect/tempo_broken"] }
+}

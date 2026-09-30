@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.bettercontent.bettersurvivalphysiology.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "better_survival_physiology.refmap.json",
+  "mixins": [
+    "MobEffectInstanceAccessor",
+    "PlayerExhaustionMixin",
+    "ThirstExhaustionMixin"
+  ],
+  "client": [
+    "DietScreenAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

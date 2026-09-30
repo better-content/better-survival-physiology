@@ -2,9 +2,9 @@
 
 ## Project identity
 
-- Repository and artifact: `systemic-salience`
-- Mod ID and resource namespace: `systemic_salience`
-- Base package: `com.bettercontent.systemicsalience`
+- Repository and artifact: `better-survival-physiology`
+- Mod ID and resource namespace: `better_survival_physiology`
+- Base package: `com.bettercontent.bettersurvivalphysiology`
 - Java: 17
 - Forge: 1.20.1-47.4.13
 

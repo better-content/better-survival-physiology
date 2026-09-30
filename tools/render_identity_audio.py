@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render physical-foley Systemic Salience review candidates.
+"""Render physical-foley Better Survival Physiology review candidates.
 
 The renderer deliberately contains no oscillator or pitched-tone generator. Identity is
 carried by recorded material, rhythm, envelope, filtering, and transient placement.
@@ -406,7 +406,7 @@ def write_review(output: Path, rendered: dict[str, np.ndarray], *, title: str) -
                               f"<audio controls src='{html.escape(name)}.ogg'></audio></label>"
                               for name in names)
             cards.append(f"<section><h2>{html.escape(aspect.title())}</h2>{players}</section>")
-    (output / "review.html").write_text("<!doctype html><meta charset='utf-8'><title>Systemic Salience base A/B</title>"
+    (output / "review.html").write_text("<!doctype html><meta charset='utf-8'><title>Better Survival Physiology base A/B</title>"
         "<style>body{max-width:760px;margin:2rem auto;background:#16191d;color:#eee;font:16px sans-serif}"
         "section{border-bottom:1px solid #444;padding:.7rem}label{display:flex;align-items:center;gap:1rem;margin:.5rem}"
         f"audio{{flex:1}}</style><h1>{html.escape(title)}</h1>"
@@ -444,9 +444,9 @@ def main() -> None:
     else:
         wanted = {f"{aspect}_{variant}" for aspect in ASPECTS for variant in ("a", "b")}
         rendered = {name: signal for name, signal in rendered.items() if name in wanted}
-    title = ("Systemic Salience — processed Endurance revisions" if args.endurance_followup
-             else "Systemic Salience — full-band revisions" if args.revisions
-             else "Systemic Salience — physical-foley base A/B")
+    title = ("Better Survival Physiology — processed Endurance revisions" if args.endurance_followup
+             else "Better Survival Physiology — full-band revisions" if args.revisions
+             else "Better Survival Physiology — physical-foley base A/B")
     write_review(args.output, rendered, title=title)
 
 

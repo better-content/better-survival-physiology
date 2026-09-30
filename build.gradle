@@ -7,15 +7,15 @@ plugins {
 }
 
 mixin {
-    add sourceSets.main, 'systemic_salience.refmap.json'
-    config 'systemic_salience.mixins.json'
+    add sourceSets.main, 'better_survival_physiology.refmap.json'
+    config 'better_survival_physiology.mixins.json'
 }
 
 version = mod_version
 group = mod_group_id
 
 base {
-    archivesName = 'systemic-salience'
+    archivesName = 'better-survival-physiology'
 }
 
 java {

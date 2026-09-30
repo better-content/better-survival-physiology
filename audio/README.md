@@ -1,4 +1,4 @@
-# Systemic Salience identity audio
+# Better Survival Physiology identity audio
 
 The eight approved gestures are Impact C, Tempo B, Work A, Mobility A, Endurance E,
 Robustness B, Renewal B, and Control B3. Control B2 contributes only the faint mechanism

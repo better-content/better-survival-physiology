@@ -1,7 +1,7 @@
 {
   "replace": false,
   "values": [
-    "#systemic_salience:sugar_medium",
-    "#systemic_salience:sugar_high"
+    "#better_survival_physiology:sugar_medium",
+    "#better_survival_physiology:sugar_high"
   ]
 }

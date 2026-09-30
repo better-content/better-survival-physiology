@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the canonical Systemic Salience badge strip and reviewable sound motifs."""
+"""Generate the canonical Better Survival Physiology badge strip and reviewable sound motifs."""
 
 from __future__ import annotations
 
