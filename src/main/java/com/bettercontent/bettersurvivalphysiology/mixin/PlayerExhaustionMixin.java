@@ -13,7 +13,7 @@ public abstract class PlayerExhaustionMixin {
     @Inject(method = "causeFoodExhaustion", at = @At("HEAD"), cancellable = true)
     private void systemicSalience$scaleActionExhaustion(float amount, CallbackInfo ci) {
         if (!((Object) this instanceof ServerPlayer player)) return;
-        float multiplier = GameplayHooks.exhaustionMultiplier(player);
+        float multiplier = GameplayHooks.hungerMultiplier(player);
         if (multiplier == 1.0f) return;
         if (multiplier > 0.0f) player.getFoodData().addExhaustion(amount * multiplier);
         ci.cancel();

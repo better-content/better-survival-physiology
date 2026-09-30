@@ -28,21 +28,19 @@ public final class MealRecap {
 
     public static void accept(MealFeedbackPacket packet) {
         if (settle == 0 && display == 0) ENTRIES.clear();
-        MetabolicSyncPacketView thresholds = new MetabolicSyncPacketView(ClientMetabolicState.snapshot());
         AspectIdentity[] nutrientAspects = {AspectIdentity.IMPACT, AspectIdentity.WORK, AspectIdentity.MOBILITY,
                 AspectIdentity.ENDURANCE, AspectIdentity.ROBUSTNESS, AspectIdentity.RENEWAL};
         for (int index = 0; index < 6; index++) if ((packet.changedMask() & (1 << index)) != 0) {
-            NutritionTier tier = NutritionTier.of(packet.nutrients()[index], thresholds.ordinary, thresholds.prepared, thresholds.feast);
+            NutritionTier tier = NutritionTier.of(packet.nutrients()[index]);
             ENTRIES.put(nutrientAspects[index], new Entry(nutrientAspects[index], tier, packet.nutrients()[index], packet.seconds()[index], State.NUTRIENT));
         }
         if (packet.sugarChanged()) {
-            State state = packet.sugar() >= .60f ? State.SUGAR_TWO : packet.sugar() >= .25f ? State.SUGAR_ONE : State.SUGAR_CRASH;
+            State state = State.SUGAR_ONE;
             ENTRIES.put(AspectIdentity.TEMPO, new Entry(AspectIdentity.TEMPO, NutritionTier.BUILDING,
-                    packet.sugar(), state == State.SUGAR_CRASH ? packet.debtSeconds() : packet.sugarSeconds(), state));
+                    packet.sugar(), packet.sugarSeconds(), state));
         }
         if (packet.alcoholChanged()) {
-            State state = packet.alcohol() > .65f ? State.ALCOHOL_IMPAIRED
-                    : packet.alcohol() >= .35f ? State.ALCOHOL_COMPOSED : State.ALCOHOL_LOW;
+            State state = packet.alcohol() >= 1f ? State.ALCOHOL_IMPAIRED : State.ALCOHOL_LOW;
             ENTRIES.put(AspectIdentity.CONTROL, new Entry(AspectIdentity.CONTROL, NutritionTier.BUILDING,
                     packet.alcohol(), packet.alcoholSeconds(), state));
         }
@@ -88,7 +86,7 @@ public final class MealRecap {
         return "~" + Math.max(1, Math.round(seconds / 60.0f)) + "m";
     }
 
-    private enum State { NUTRIENT, SUGAR_ONE, SUGAR_TWO, SUGAR_CRASH, ALCOHOL_LOW, ALCOHOL_COMPOSED, ALCOHOL_IMPAIRED }
+    private enum State { NUTRIENT, SUGAR_ONE, ALCOHOL_LOW, ALCOHOL_IMPAIRED }
 
     private record Entry(AspectIdentity aspect, NutritionTier tier, float value, int seconds, State state) {
         MutableComponent component() {
@@ -104,25 +102,17 @@ public final class MealRecap {
 
         String label() {
             return switch (state) {
-                case NUTRIENT -> aspect.representative.substring(0, 1).toUpperCase() + aspect.representative.substring(1)
+                case NUTRIENT -> aspect.displayName
                         + " — "
                         + (tier == NutritionTier.BUILDING ? "Undernourished · " + Math.round(value * 100) + "%"
                         : tier.name().substring(0, 1) + tier.name().substring(1).toLowerCase()
                         + " · " + DietBenefits.effect(aspect, tier));
-                case SUGAR_ONE -> "Sugar — » Tempo I · cadence +50%, upper nutrition burns 2×";
-                case SUGAR_TWO -> "Sugar — » Tempo II · cadence +100%, upper nutrition burns 5×";
-                case SUGAR_CRASH -> "Sugar — » Tempo crash";
-                case ALCOHOL_LOW -> "Alcohol — ⊕ Control · Low";
-                case ALCOHOL_COMPOSED -> "Alcohol — ⊕ Control · Composed";
-                case ALCOHOL_IMPAIRED -> "Alcohol — ⊕ Control · Impaired";
+                case SUGAR_ONE -> "Sweetness — benefits ×" + String.format("%.1f", 1 + value)
+                        + ", appetite ×" + String.format("%.1f", Math.pow(8, value));
+                case ALCOHOL_LOW -> "Draught — damage reduction " + Math.round(40 * value) + "% · impairment rises";
+                case ALCOHOL_IMPAIRED -> "Draught — blackout until 85%";
             };
         }
     }
 
-    private static final class MetabolicSyncPacketView {
-        final float ordinary, prepared, feast;
-        MetabolicSyncPacketView(com.bettercontent.bettersurvivalphysiology.network.MetabolicSyncPacket packet) {
-            ordinary = packet.ordinary(); prepared = packet.prepared(); feast = packet.feast();
-        }
-    }
 }

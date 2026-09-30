@@ -82,7 +82,7 @@ public final class SystemicDietScreen extends Screen {
 
     private int cardHeight(AspectIdentity aspect, MetabolicSyncPacket state, int width) {
         int effectWidth = Math.max(60, width - 83);
-        int result = 38;
+        int result = 50;
         for (DietBenefits.GuideTier tier : DietBenefits.guide(aspect, state)) {
             result += Math.max(11, font.split(Component.literal(tier.effect()), effectWidth).size() * 10) + 2;
         }
@@ -93,15 +93,14 @@ public final class SystemicDietScreen extends Screen {
                           int x, int y, int width, int height) {
         graphics.fill(x, y, x + width, y + height, 0xFF202A33);
         graphics.fill(x, y, x + 3, y + height, 0xFF000000 | aspect.color);
-        String group = aspect == AspectIdentity.TEMPO ? "sugars" : aspect.representative;
-        Component name = Component.translatable("groups.diet." + group + ".name");
-        graphics.drawString(font, name.getString() + " · " + aspect.displayName, x + 9, y + 7, 0xFFF0E8D8, false);
+        graphics.drawString(font, aspect.displayName, x + 9, y + 7, 0xFFF0E8D8, false);
+        graphics.drawString(font, aspect.sources, x + 9, y + 19, 0xFFB9C8CF, false);
         float value = DietBenefits.value(state, aspect);
         String percent = Math.round(value * 100) + "%";
         graphics.drawString(font, percent, x + width - 9 - font.width(percent), y + 7, 0xFFF0E8D8, false);
 
         int barX = x + 9;
-        int barY = y + 23;
+        int barY = y + 35;
         int barWidth = width - 18;
         graphics.fill(barX, barY, barX + barWidth, barY + 5, 0xFF111820);
         graphics.fill(barX, barY, barX + Math.round(Math.max(0, Math.min(1, value)) * barWidth), barY + 5,
@@ -112,7 +111,7 @@ public final class SystemicDietScreen extends Screen {
             graphics.fill(marker, barY - 2, marker + 1, barY + 7, 0xFFECE8E1);
         }
 
-        int lineY = y + 35;
+        int lineY = y + 47;
         int effectWidth = Math.max(60, width - 83);
         for (DietBenefits.GuideTier tier : DietBenefits.guide(aspect, state)) {
             int color = tier.current() ? 0xFFF4ECD4 : 0xFFB9C8CF;

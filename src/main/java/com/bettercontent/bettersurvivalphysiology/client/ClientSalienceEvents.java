@@ -42,6 +42,11 @@ public final class ClientSalienceEvents {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.options.hideGui || minecraft.player == null) return;
         MetabolicSyncPacket state = ClientMetabolicState.snapshot();
+        if (PresentationFlags.has(state.flags(), PresentationFlags.CONTROL_BLACKOUT)) {
+            int width = event.getWindow().getGuiScaledWidth(), height = event.getWindow().getGuiScaledHeight();
+            event.getGuiGraphics().fill(0, 0, width, height, 0xE0000000);
+            event.getGuiGraphics().drawCenteredString(minecraft.font, "Draught blackout", width / 2, height / 2, 0xFFE8DCC4);
+        }
         List<Icon> active = activeIcons(state);
         int y = event.getWindow().getGuiScaledHeight() - 72;
         if (!active.isEmpty()) {
@@ -75,13 +80,9 @@ public final class ClientSalienceEvents {
         for (int index = 0; index < identities.size(); index++) {
             AspectIdentity identity = identities.get(index);
             if (index > 0) line.append(Component.literal(" · ").withStyle(style -> style.withColor(0x777777)));
-            String name = identity == AspectIdentity.TEMPO ? "Sugar" : identity == AspectIdentity.CONTROL ? "Alcohol"
-                    : identity.representative.substring(0, 1).toUpperCase() + identity.representative.substring(1);
-            line.append(Component.literal(name + " — ").withStyle(style -> style.withColor(identity.color)))
+            line.append(Component.literal(identity.displayName + " — ").withStyle(style -> style.withColor(identity.color)))
                     .append(Component.literal(identity.badge()).withStyle(style -> style.withFont(ASPECT_FONT)))
-                    .append(Component.literal(" "))
-                    .append(Component.literal(identity.glyph + " " + identity.displayName)
-                            .withStyle(style -> style.withColor(identity.color)));
+                    .append(Component.literal(" " + identity.glyph).withStyle(style -> style.withColor(identity.color)));
         }
         event.getToolTip().add(line);
         AspectIdentity first = identities.get(0);
@@ -99,11 +100,9 @@ public final class ClientSalienceEvents {
         else if (PresentationFlags.has(flags, PresentationFlags.ENDURANCE_READY)) result.add(new Icon(AspectIdentity.ENDURANCE, null));
         if (PresentationFlags.has(flags, PresentationFlags.ROBUSTNESS_READY)) result.add(new Icon(AspectIdentity.ROBUSTNESS, null));
         if (PresentationFlags.has(flags, PresentationFlags.RENEWAL_READY)) result.add(new Icon(AspectIdentity.RENEWAL, null));
-        if (PresentationFlags.has(flags, PresentationFlags.TEMPO_TWO)) result.add(new Icon(AspectIdentity.TEMPO, "2"));
-        else if (PresentationFlags.has(flags, PresentationFlags.TEMPO_ONE)) result.add(new Icon(AspectIdentity.TEMPO, "1"));
-        else if (PresentationFlags.has(flags, PresentationFlags.TEMPO_CRASH)) result.add(new Icon(AspectIdentity.TEMPO, "↓"));
+        if (PresentationFlags.has(flags, PresentationFlags.TEMPO_ONE)) result.add(new Icon(AspectIdentity.TEMPO, null));
+        if (PresentationFlags.has(flags, PresentationFlags.CONTROL_BLACKOUT)) result.add(new Icon(AspectIdentity.CONTROL, "×"));
         if (PresentationFlags.has(flags, PresentationFlags.CONTROL_IMPAIRED)) result.add(new Icon(AspectIdentity.CONTROL, "!"));
-        else if (PresentationFlags.has(flags, PresentationFlags.CONTROL_COMPOSED)) result.add(new Icon(AspectIdentity.CONTROL, null));
         result.sort(Comparator.comparingInt(icon -> icon.aspect.icon));
         return result;
     }

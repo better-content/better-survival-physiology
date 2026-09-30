@@ -12,6 +12,7 @@ public final class PresentationFlags {
     public static final int TEMPO_CRASH = 1 << 8;
     public static final int CONTROL_COMPOSED = 1 << 9;
     public static final int CONTROL_IMPAIRED = 1 << 10;
+    public static final int CONTROL_BLACKOUT = 1 << 11;
 
     private PresentationFlags() {}
 

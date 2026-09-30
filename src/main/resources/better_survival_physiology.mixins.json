@@ -6,6 +6,9 @@
   "refmap": "better_survival_physiology.refmap.json",
   "mixins": [
     "MobEffectInstanceAccessor",
+    "DietValueGeneratorMixin",
+    "DietApiImplMixin",
+    "DietDecayMixin",
     "PlayerExhaustionMixin",
     "ThirstExhaustionMixin"
   ],

@@ -18,6 +18,18 @@ public final class DietBridge {
         return tracker(player).map(DietBridge::snapshot).orElse(NutritionSnapshot.EMPTY);
     }
 
+    public static void awardMilk(Player player) {
+        tracker(player).ifPresent(diet -> {
+            boolean changed = false;
+            for (String group : new String[]{"dairy", "fats"}) {
+                if (!diet.getValues().containsKey(group)) continue;
+                diet.setValue(group, Math.min(1.0f, diet.getValue(group) + 0.06f));
+                changed = true;
+            }
+            if (changed) diet.sync();
+        });
+    }
+
     /** Diet keeps the values and persistence; the temporary upper band has a real-time cost. */
     public static boolean drainUpperBand(Player player, double prepared, double sugar) {
         return tracker(player).map(diet -> {

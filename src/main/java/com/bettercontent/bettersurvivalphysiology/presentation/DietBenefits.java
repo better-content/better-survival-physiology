@@ -1,9 +1,10 @@
 package com.bettercontent.bettersurvivalphysiology.presentation;
 
+import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicMath;
 import com.bettercontent.bettersurvivalphysiology.network.MetabolicSyncPacket;
 import java.util.List;
 
-/** Player-facing promises for the eight Diet rows; gameplay thresholds use the same tiers. */
+/** Player-facing guide to the four ordinary-food milestones and two temporary loads. */
 public final class DietBenefits {
     private DietBenefits() {}
 
@@ -23,66 +24,53 @@ public final class DietBenefits {
     }
 
     public static String current(AspectIdentity aspect, MetabolicSyncPacket state) {
-        float value = value(state, aspect);
-        if (aspect == AspectIdentity.TEMPO) {
-            if (value >= .60f) return "Tempo II: cadence +100%; upper nutrition burns 5x";
-            if (value >= .25f) return "Tempo I: cadence +50%; upper nutrition burns 2x";
-            return state.debt() >= .25f ? "Crash: slower recovery and greater exhaustion" : "No active Tempo";
-        }
-        if (aspect == AspectIdentity.CONTROL) {
-            if (value >= .90f) return "Severe impairment: slow attacks and stumbles";
-            if (value > .65f) return "Impaired: slower attacks and poor handling";
-            if (value >= .35f) return "Composed: up to 75% steadier aim";
-            return "No active composure";
-        }
-        NutritionTier tier = NutritionTier.of(value, state.ordinary(), state.prepared(), state.feast());
-        return effect(aspect, tier);
+        if (aspect == AspectIdentity.TEMPO) return String.format("Other effects ×%.2f; hunger and nutrition drain ×%.2f",
+                MetabolicMath.amplification(state.sugar()), MetabolicMath.sugarDrain(state.sugar()));
+        if (aspect == AspectIdentity.CONTROL) return PresentationFlags.has(state.flags(), PresentationFlags.CONTROL_BLACKOUT)
+                ? "Blacked out until Draught falls to 85%"
+                : String.format("Damage reduction %.0f%%; impairment starts above 30%%",
+                MetabolicMath.alcoholReduction(state.alcohol(), state.sugar()) * 100.0);
+        return effect(aspect, NutritionTier.of(value(state, aspect)));
     }
 
     public static String effect(AspectIdentity aspect, NutritionTier tier) {
-        if (tier == NutritionTier.BUILDING) return "Below 50%: eat this group";
+        if (tier == NutritionTier.BUILDING) return "First ability at 20%";
+        int stage = tier.ordinal();
         return switch (aspect) {
-            case IMPACT -> tier == NutritionTier.FEAST ? "Melee +75%; charged blow +200%" :
-                    tier == NutritionTier.PREPARED ? "Melee damage +75%" : "Stronger knockback";
-            case WORK -> tier == NutritionTier.FEAST ? "Mining +100%; rhythm up to +200%" :
-                    tier == NutritionTier.PREPARED ? "Mining speed +100%" : "Mining speed +10%";
-            case MOBILITY -> tier == NutritionTier.FEAST ? "Move +50%; sprint surge up to +100%" :
-                    tier == NutritionTier.PREPARED ? "Move and swim +50%; step +1" : "Move and swim +5%";
-            case ENDURANCE -> tier == NutritionTier.FEAST ? "Costs -85%; 10s emergency reserve" :
-                    tier == NutritionTier.PREPARED ? "Hunger, thirst, stamina costs -70%" : "Bodily resource costs -10%";
-            case ROBUSTNESS -> tier == NutritionTier.FEAST ? "Drift -80%; guard one hit per 30s" :
-                    tier == NutritionTier.PREPARED ? "Drift -80%; knockback resist +50%" : "Temperature drift -15%";
-            case RENEWAL -> tier == NutritionTier.FEAST ? "Harm clears 4x; cleanse every 20s" :
-                    tier == NutritionTier.PREPARED ? "Harm clears 4x; milk keeps buffs" : "Harm clears faster";
-            case TEMPO, CONTROL -> throw new IllegalArgumentException("Loads have their own thresholds");
+            case IMPACT -> new String[]{"", "Full-charge impact", "Heavy strike after 4s idle", "Heavy strike staggers", "Heavy strike cleaves two nearby foes"}[stage];
+            case WORK -> new String[]{"", "Correct-tool work rhythm", "Rhythm stacks mining speed", "Rhythm lasts through a 5s pause", "Five stacks grant a 5s work burst"}[stage];
+            case MOBILITY -> new String[]{"", "Softer landings", "Half-block stepping", "Stride after 3s sprint", "Sprinting jump gains a burst"}[stage];
+            case ENDURANCE -> new String[]{"", "Hunger costs fall", "Thirst costs fall", "Stamina costs fall", "10s emergency reserve when depleted"}[stage];
+            case ROBUSTNESS -> new String[]{"", "Resist heat and cold drift", "Resist knockback", "Extreme temperature slows less", "Guard one exposure or knockback / 30s"}[stage];
+            case RENEWAL -> new String[]{"", "Meals recover one heart / 30s", "Milk preserves beneficial effects", "Harmful effects fade faster", "Cleanse one harmful effect / 20s"}[stage];
+            case TEMPO, CONTROL -> throw new IllegalArgumentException("Loads use continuous effects");
         };
     }
 
     public static String preparedPromise(AspectIdentity aspect) {
         return switch (aspect) {
-            case TEMPO -> "Sugar: +50% cadence; upper nutrition burns 2x";
-            case CONTROL -> "Alcohol: moderate load steadies aim; excess impairs";
-            default -> aspect.representative + ": " + effect(aspect, NutritionTier.PREPARED);
+            case TEMPO -> "Sweetness amplifies other effects and burns food faster";
+            case CONTROL -> "Draught reduces damage but steadily impairs control";
+            default -> aspect.displayName + ": " + effect(aspect, NutritionTier.SECOND);
         };
     }
 
-    /** All visible steps for one Diet group, including the current step. */
     public static List<GuideTier> guide(AspectIdentity aspect, MetabolicSyncPacket state) {
         float value = value(state, aspect);
         if (aspect == AspectIdentity.TEMPO) return List.of(
-                new GuideTier("25%", .25f, "Tempo I: cadence +50%; upper nutrition burns 2x", value >= .25f && value < .60f),
-                new GuideTier("60%", .60f, "Tempo II: cadence +100%; upper nutrition burns 5x", value >= .60f),
-                new GuideTier("Debt", -1, "Sugar builds debt; a crash slows recovery", value < .25f && state.debt() >= .25f));
+                new GuideTier("Benefit", -1, String.format("All unlocked effects ×%.2f", MetabolicMath.amplification(value)), true),
+                new GuideTier("Cost", -1, String.format("Hunger and nutrition drain ×%.2f", MetabolicMath.sugarDrain(value)), true));
         if (aspect == AspectIdentity.CONTROL) return List.of(
-                new GuideTier("35–65%", .35f, "Composed: steadier aim", value >= .35f && value <= .65f),
-                new GuideTier(">65%", .65f, "Impaired: slower attacks and poor handling", value > .65f && value < .90f),
-                new GuideTier("90%", .90f, "Severe impairment: slow attacks and stumbles", value >= .90f));
-        NutritionTier tier = NutritionTier.of(value, state.ordinary(), state.prepared(), state.feast());
+                new GuideTier("Guard", -1, String.format("Damage reduction %.0f%% (40%% cap)", MetabolicMath.alcoholReduction(value, state.sugar()) * 100), true),
+                new GuideTier("30%", .30f, "Control penalties begin above 30%", value > .30f),
+                new GuideTier("50%", .50f, "Penalties become significant", value >= .50f),
+                new GuideTier("90%", .90f, "Severe control loss", value >= .90f),
+                new GuideTier("100%", 1.0f, "Blackout until load falls to 85%", value >= 1.0f));
+        NutritionTier tier = NutritionTier.of(value);
         return List.of(
-                new GuideTier(percent(state.ordinary()), state.ordinary(), effect(aspect, NutritionTier.SUPPORTED), tier == NutritionTier.SUPPORTED),
-                new GuideTier(percent(state.prepared()), state.prepared(), effect(aspect, NutritionTier.PREPARED), tier == NutritionTier.PREPARED),
-                new GuideTier(percent(state.feast()), state.feast(), effect(aspect, NutritionTier.FEAST), tier == NutritionTier.FEAST));
+                new GuideTier("20%", .20f, effect(aspect, NutritionTier.FIRST), tier == NutritionTier.FIRST),
+                new GuideTier("40%", .40f, effect(aspect, NutritionTier.SECOND), tier == NutritionTier.SECOND),
+                new GuideTier("60%", .60f, effect(aspect, NutritionTier.THIRD), tier == NutritionTier.THIRD),
+                new GuideTier("80%", .80f, effect(aspect, NutritionTier.FOURTH), tier == NutritionTier.FOURTH));
     }
-
-    private static String percent(float value) { return Math.round(value * 100) + "%"; }
 }

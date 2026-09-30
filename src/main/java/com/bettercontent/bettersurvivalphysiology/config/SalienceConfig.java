@@ -20,30 +20,22 @@ public final class SalienceConfig {
 
     public static final ForgeConfigSpec SPEC;
     public static final ForgeConfigSpec.DoubleValue SUGAR_HALF_LIFE_MINUTES;
-    public static final ForgeConfigSpec.DoubleValue DEBT_HALF_LIFE_MINUTES;
     public static final ForgeConfigSpec.DoubleValue ALCOHOL_CLEAR_MINUTES;
-    public static final ForgeConfigSpec.DoubleValue SUGAR_DEBT_GATE;
-    public static final ForgeConfigSpec.DoubleValue ORDINARY_THRESHOLD;
-    public static final ForgeConfigSpec.DoubleValue PREPARED_THRESHOLD;
-    public static final ForgeConfigSpec.DoubleValue FEAST_THRESHOLD;
+    public static final double FIRST = 0.20;
+    public static final double SECOND = 0.40;
+    public static final double THIRD = 0.60;
+    public static final double FOURTH = 0.80;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ALCOHOL_POTENCIES;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-        builder.comment("Tempo sugar/debt and Control alcohol tuning.").push("metabolism");
+        builder.comment("Sweetness and Draught load tuning.").push("metabolism");
         SUGAR_HALF_LIFE_MINUTES = range(builder, "sugarHalfLifeMinutes", 4.0, 0.1, 120.0);
-        DEBT_HALF_LIFE_MINUTES = range(builder, "debtHalfLifeMinutes", 10.0, 0.1, 240.0);
         ALCOHOL_CLEAR_MINUTES = range(builder, "alcoholClearMinutes", 20.0, 0.1, 240.0);
-        SUGAR_DEBT_GATE = range(builder, "sugarDebtRecoveryGate", 0.25, 0.0, 1.0);
         ALCOHOL_POTENCIES = builder.comment("item_id=load entries; replace this list to tune drinks or add compat drinks.")
                 .defineList("alcoholPotencies", DEFAULT_ALCOHOL_POTENCIES, SalienceConfig::validAlcoholEntry);
         builder.pop();
 
-        builder.comment("Shared discrete thresholds for every ordinary group.").push("thresholds");
-        ORDINARY_THRESHOLD = threshold(builder, "ordinary", 0.50);
-        PREPARED_THRESHOLD = threshold(builder, "prepared", 0.75);
-        FEAST_THRESHOLD = threshold(builder, "feast", 0.90);
-        builder.pop();
         SPEC = builder.build();
     }
 
@@ -70,10 +62,6 @@ public final class SalienceConfig {
 
     private static ForgeConfigSpec.DoubleValue range(ForgeConfigSpec.Builder builder, String key, double value, double min, double max) {
         return builder.defineInRange(key, value, min, max);
-    }
-
-    private static ForgeConfigSpec.DoubleValue threshold(ForgeConfigSpec.Builder builder, String key, double value) {
-        return builder.defineInRange(key, value, 0.0, 1.0);
     }
 
     private static boolean validAlcoholEntry(Object value) {

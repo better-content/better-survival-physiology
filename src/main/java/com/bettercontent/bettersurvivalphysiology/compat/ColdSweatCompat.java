@@ -32,6 +32,11 @@ public final class ColdSweatCompat {
         LAST_BODY.put(player.getUUID(), Temperature.get(player, Temperature.Trait.BODY));
     }
 
+    public static boolean isExtreme(ServerPlayer player) {
+        return ModList.get().isLoaded("cold_sweat")
+                && Math.abs(Temperature.get(player, Temperature.Trait.BODY)) >= .75;
+    }
+
     public static boolean isTemperatureDamage(net.minecraft.world.damagesource.DamageSource source) {
         return source.typeHolder().unwrapKey()
                 .map(key -> key.location().getNamespace().equals("cold_sweat"))

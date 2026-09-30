@@ -14,6 +14,6 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 abstract class ThirstExhaustionMixin {
     @ModifyVariable(method = "addExhaustion", at = @At("HEAD"), argsOnly = true, ordinal = 0, require = 0)
     private float systemicSalience$scaleThirstExhaustion(float amount, Player player) {
-        return player instanceof ServerPlayer server ? amount * GameplayHooks.exhaustionMultiplier(server) : amount;
+        return player instanceof ServerPlayer server ? amount * GameplayHooks.thirstMultiplier(server) : amount;
     }
 }

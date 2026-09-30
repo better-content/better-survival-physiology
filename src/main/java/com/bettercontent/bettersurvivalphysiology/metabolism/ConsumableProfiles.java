@@ -9,6 +9,7 @@ import net.minecraft.world.item.ItemStack;
 
 public final class ConsumableProfiles {
     public static final TagKey<Item> DIET_SUGARS = TagKey.create(Registries.ITEM, new ResourceLocation("diet", "sugars"));
+    public static final TagKey<Item> DIET_FRUITS = TagKey.create(Registries.ITEM, new ResourceLocation("diet", "fruits"));
     public static final TagKey<Item> SUGAR_MEDIUM = TagKey.create(Registries.ITEM, new ResourceLocation("better_survival_physiology", "sugar_medium"));
     public static final TagKey<Item> SUGAR_HIGH = TagKey.create(Registries.ITEM, new ResourceLocation("better_survival_physiology", "sugar_high"));
 
@@ -18,6 +19,7 @@ public final class ConsumableProfiles {
         if (!stack.is(DIET_SUGARS)) return 0.0;
         if (stack.is(SUGAR_HIGH)) return 0.34;
         if (stack.is(SUGAR_MEDIUM)) return 0.22;
+        if (stack.is(DIET_FRUITS)) return 0.06;
         return 0.12;
     }
 

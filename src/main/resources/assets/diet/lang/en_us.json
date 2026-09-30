@@ -1,6 +1,10 @@
 {
-  "groups.diet.alcohol.name": "Alcohol",
-  "groups.diet.dairy.name": "Dairy",
-  "groups.diet.fats.name": "Fats",
-  "groups.diet.sugars.name": "Sugar"
+  "groups.diet.proteins.name": "Sinew",
+  "groups.diet.sugars.name": "Sweetness",
+  "groups.diet.grains.name": "Granary",
+  "groups.diet.fruits.name": "Orchard",
+  "groups.diet.fats.name": "Richness",
+  "groups.diet.vegetables.name": "Garden",
+  "groups.diet.dairy.name": "Cream",
+  "groups.diet.alcohol.name": "Draught"
 }

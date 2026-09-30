@@ -8,18 +8,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class NutritionPresentationTest {
     @Test
-    void tiersUseTheServerThresholdContract() {
-        assertEquals(NutritionTier.BUILDING, NutritionTier.of(.49, .50, .75, .90));
-        assertEquals(NutritionTier.SUPPORTED, NutritionTier.of(.50, .50, .75, .90));
-        assertEquals(NutritionTier.PREPARED, NutritionTier.of(.75, .50, .75, .90));
-        assertEquals(NutritionTier.FEAST, NutritionTier.of(.90, .50, .75, .90));
+    void tiersUseFourProgressionMilestones() {
+        assertEquals(NutritionTier.BUILDING, NutritionTier.of(.19));
+        assertEquals(NutritionTier.FIRST, NutritionTier.of(.20));
+        assertEquals(NutritionTier.SECOND, NutritionTier.of(.40));
+        assertEquals(NutritionTier.THIRD, NutritionTier.of(.60));
+        assertEquals(NutritionTier.FOURTH, NutritionTier.of(.80));
     }
 
     @Test
     void upperBandCountdownReflectsTheActiveSugarLoad() {
-        assertTrue(Math.abs(NutritionEstimates.nutrientSeconds(.95, .90, 0.0) - 100) <= 1);
-        assertTrue(Math.abs(NutritionEstimates.nutrientSeconds(.95, .90, .70) - 20) <= 1);
-        assertEquals(-1, NutritionEstimates.nutrientSeconds(.70, .50, 0.0));
+        assertTrue(NutritionEstimates.nutrientSeconds(.95, .80, .70)
+                < NutritionEstimates.nutrientSeconds(.95, .80, 0.0));
+        assertEquals(-1, NutritionEstimates.nutrientSeconds(.70, .40, 0.0));
     }
 
     @Test

@@ -24,10 +24,10 @@ class SystemicSalienceContractTest {
     }
 
     @Test
-    void configuredThresholdsPreservePreparationOrdering() {
-        assertTrue(SalienceConfig.ORDINARY_THRESHOLD.getDefault() < SalienceConfig.PREPARED_THRESHOLD.getDefault());
-        assertTrue(SalienceConfig.PREPARED_THRESHOLD.getDefault() < SalienceConfig.FEAST_THRESHOLD.getDefault());
-        assertTrue(SalienceConfig.FEAST_THRESHOLD.getDefault() < 1.0);
+    void thresholdsPreservePreparationOrdering() {
+        assertTrue(SalienceConfig.FIRST < SalienceConfig.SECOND);
+        assertTrue(SalienceConfig.SECOND < SalienceConfig.THIRD);
+        assertTrue(SalienceConfig.THIRD < SalienceConfig.FOURTH);
     }
 
     @Test

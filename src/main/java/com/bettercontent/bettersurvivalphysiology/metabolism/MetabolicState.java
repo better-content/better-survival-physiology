@@ -4,14 +4,14 @@ import net.minecraft.nbt.CompoundTag;
 
 public final class MetabolicState {
     private static final String SUGAR = "sugar";
-    private static final String DEBT = "debt";
     private static final String ALCOHOL = "alcohol";
+    private static final String BLACKOUT = "blackout";
     private static final String NUTRITION_THREAD_TOKEN = "nutrition_thread_token";
     private static final String NUTRITION_WARNING_PUBLISHED = "nutrition_warning_published";
 
     public double sugar;
-    public double debt;
     public double alcohol;
+    public boolean blackout;
     public String nutritionThreadToken = "";
     public boolean nutritionWarningPublished;
 
@@ -22,6 +22,13 @@ public final class MetabolicState {
     public int dairyCleanseCooldown;
     public int sprintTicks;
     public int workSequence;
+    public int workBurstTicks;
+    public int orchardBurstCooldown;
+    public int mealRecoveryCooldown;
+    public boolean wasOnGround;
+    public double blackoutX;
+    public double blackoutY;
+    public double blackoutZ;
     public long lastBreakTick = -100L;
     public long lastAttackTick = -100L;
     public transient java.util.UUID heavyBlowTarget;
@@ -32,12 +39,15 @@ public final class MetabolicState {
     public void tickTransient() {
         sugar = MetabolicMath.tickSugar(sugar);
         alcohol = MetabolicMath.tickAlcohol(alcohol);
-        debt = MetabolicMath.tickDebt(debt, sugar);
+        if (blackout && alcohol <= 0.85) blackout = false;
         heavyBlowCooldown = decrement(heavyBlowCooldown);
         enduranceReserveCooldown = decrement(enduranceReserveCooldown);
         enduranceReserveTicks = decrement(enduranceReserveTicks);
         weatheredCooldown = decrement(weatheredCooldown);
         dairyCleanseCooldown = decrement(dairyCleanseCooldown);
+        workBurstTicks = decrement(workBurstTicks);
+        orchardBurstCooldown = decrement(orchardBurstCooldown);
+        mealRecoveryCooldown = decrement(mealRecoveryCooldown);
     }
 
     public void addSugar(double amount) {
@@ -46,17 +56,19 @@ public final class MetabolicState {
 
     public void addAlcohol(double amount) {
         alcohol = MetabolicMath.clamp01(alcohol + Math.max(0.0, amount));
-    }
-
-    public void addDebt(double amount) {
-        debt = MetabolicMath.clamp01(debt + Math.max(0.0, amount));
+        if (alcohol >= 1.0) blackout = true;
     }
 
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
         tag.putDouble(SUGAR, sugar);
-        tag.putDouble(DEBT, debt);
         tag.putDouble(ALCOHOL, alcohol);
+        tag.putBoolean(BLACKOUT, blackout);
+        if (blackout) {
+            tag.putDouble("blackout_x", blackoutX);
+            tag.putDouble("blackout_y", blackoutY);
+            tag.putDouble("blackout_z", blackoutZ);
+        }
         if (validToken(nutritionThreadToken)) tag.putString(NUTRITION_THREAD_TOKEN, nutritionThreadToken);
         tag.putBoolean(NUTRITION_WARNING_PUBLISHED, nutritionWarningPublished);
         tag.putInt("heavy_blow_cd", heavyBlowCooldown);
@@ -69,8 +81,11 @@ public final class MetabolicState {
     public static MetabolicState load(CompoundTag tag) {
         MetabolicState state = new MetabolicState();
         state.sugar = MetabolicMath.clamp01(tag.getDouble(SUGAR));
-        state.debt = MetabolicMath.clamp01(tag.getDouble(DEBT));
         state.alcohol = MetabolicMath.clamp01(tag.getDouble(ALCOHOL));
+        state.blackout = tag.getBoolean(BLACKOUT) && state.alcohol > 0.85;
+        state.blackoutX = tag.getDouble("blackout_x");
+        state.blackoutY = tag.getDouble("blackout_y");
+        state.blackoutZ = tag.getDouble("blackout_z");
         String nutritionThreadToken = tag.getString(NUTRITION_THREAD_TOKEN);
         state.nutritionThreadToken = validToken(nutritionThreadToken) ? nutritionThreadToken : "";
         state.nutritionWarningPublished = !state.nutritionThreadToken.isBlank()
