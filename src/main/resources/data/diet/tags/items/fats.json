@@ -22,6 +22,7 @@
     {"id": "minecraft:egg", "required": false},
     {"id": "farmersdelight:fried_egg", "required": false},
     {"id": "farmersdelight:bacon_and_eggs", "required": false},
+    {"id": "fruitsdelight:bowl_of_pineapple_fried_rice", "required": false},
     {"id": "delightful:nut_butter_bottle", "required": false},
     {"id": "delightful:animal_fat", "required": false},
     {"id": "delightful:honey_glazed_walnut", "required": false},
