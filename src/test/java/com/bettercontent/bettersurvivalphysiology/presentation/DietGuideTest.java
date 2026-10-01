@@ -22,14 +22,17 @@ final class DietGuideTest {
     @Test
     void sugarAndAlcoholShowFutureEffectsAndTheirRisks() {
         var sugar = DietBenefits.guide(AspectIdentity.TEMPO, state(0, .30f, .30f, 0, 0, .5f, .75f, .9f));
+        assertEquals("20%", sugar.get(0).threshold());
+        assertEquals("80%", sugar.get(3).threshold());
         assertTrue(sugar.get(0).current());
-        assertTrue(sugar.get(1).current());
+        assertFalse(sugar.get(1).current());
         assertTrue(sugar.get(1).effect().contains("Hunger"));
 
         var alcohol = DietBenefits.guide(AspectIdentity.CONTROL, state(0, 0, 0, .70f, 0, .5f, .75f, .9f));
         assertTrue(alcohol.get(0).current());
         assertTrue(alcohol.get(1).current());
         assertTrue(alcohol.get(2).current());
+        assertFalse(alcohol.get(3).current());
     }
 
     private static MetabolicSyncPacket state(float proteins, float sugar, float debt, float alcohol,

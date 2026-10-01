@@ -29,7 +29,7 @@ public final class SalienceConfig {
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-        builder.comment("Sweetness and Draught load tuning.").push("metabolism");
+        builder.comment("Nectar and Draught load tuning.").push("metabolism");
         SUGAR_HALF_LIFE_MINUTES = range(builder, "sugarHalfLifeMinutes", 4.0, 0.1, 120.0);
         ALCOHOL_CLEAR_MINUTES = range(builder, "alcoholClearMinutes", 20.0, 0.1, 240.0);
         ALCOHOL_POTENCIES = builder.comment("item_id=load entries; replace this list to tune drinks or add compat drinks.")

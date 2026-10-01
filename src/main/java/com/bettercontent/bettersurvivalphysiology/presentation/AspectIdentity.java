@@ -6,11 +6,11 @@ import java.util.Locale;
 
 public enum AspectIdentity {
     IMPACT(0, "proteins", "✦", "Sinew", "meat, eggs, legumes", 0xFF4055),
-    TEMPO(1, "sugar", "»", "Sweetness", "fruit, honey, sweets", 0x00A985),
-    WORK(2, "grains", "⚒", "Granary", "grain, bread, porridge", 0xF0E2C5),
-    MOBILITY(3, "fruits", "➜", "Orchard", "fruit, berries", 0xE0B01F),
-    ENDURANCE(4, "fats", "∞", "Richness", "meat fat, oils, nuts, dairy", 0x52606A),
-    ROBUSTNESS(5, "vegetables", "◆", "Garden", "greens, roots, vegetables", 0xAF6A2F),
+    TEMPO(1, "sugar", "»", "Nectar", "fruit, honey, sweets", 0x00A985),
+    WORK(2, "grains", "⚒", "Grain", "grain, bread, porridge", 0xF0E2C5),
+    MOBILITY(3, "fruits", "➜", "Berry", "fruit, berries", 0xE0B01F),
+    ENDURANCE(4, "fats", "∞", "Tallow", "meat fat, oils, nuts, dairy", 0x52606A),
+    ROBUSTNESS(5, "vegetables", "◆", "Root", "greens, roots, vegetables", 0xAF6A2F),
     RENEWAL(6, "dairy", "✚", "Cream", "milk, cheese, cultured dairy", 0x6CCAF0),
     CONTROL(7, "alcohol", "⊕", "Draught", "fermented drinks", 0x8E5BB7);
 

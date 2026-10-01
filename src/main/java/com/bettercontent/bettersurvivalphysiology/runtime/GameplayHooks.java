@@ -28,7 +28,7 @@ public final class GameplayHooks {
         double fats = nutrition.actual(NutritionSnapshot.Group.FATS);
         double savings = fats >= threshold ? Math.min(0.85, 0.40 * fats * MetabolicMath.amplification(state.sugar)) : 0.0;
         double ordinary = state.enduranceReserveTicks > 0 ? 0.0 : 1.0 - savings;
-        // Sweetness is a separate surcharge: Richness and its emergency reserve cannot erase it.
+        // Nectar is a separate surcharge: Tallow and its emergency reserve cannot erase it.
         return (float) (ordinary + MetabolicMath.sugarDrain(state.sugar) - 1.0
                 + 2.0 * MetabolicMath.alcoholImpairment(state.alcohol, state.sugar));
     }

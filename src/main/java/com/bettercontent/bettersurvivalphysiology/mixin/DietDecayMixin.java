@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-/** Scale Diet's native hunger-linked decay continuously with Sweetness. */
+/** Scale Diet's native hunger-linked decay continuously with Nectar. */
 @Mixin(targets = "com.illusivesoulworks.diet.common.capability.PlayerDietTracker", remap = false)
 public abstract class DietDecayMixin {
     @Shadow @Final private Player player;

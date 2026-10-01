@@ -107,7 +107,7 @@ public final class MealRecap {
                         + (tier == NutritionTier.BUILDING ? "Undernourished · " + Math.round(value * 100) + "%"
                         : tier.name().substring(0, 1) + tier.name().substring(1).toLowerCase()
                         + " · " + DietBenefits.effect(aspect, tier));
-                case SUGAR_ONE -> "Sweetness — benefits ×" + String.format("%.1f", 1 + value)
+                case SUGAR_ONE -> "Nectar — benefits ×" + String.format("%.1f", 1 + value)
                         + ", appetite ×" + String.format("%.1f", Math.pow(8, value));
                 case ALCOHOL_LOW -> "Draught — damage reduction " + Math.round(40 * value) + "% · impairment rises";
                 case ALCOHOL_IMPAIRED -> "Draught — blackout until 85%";

@@ -114,7 +114,7 @@ public final class SalienceEvents {
             double burst = 0.35 * nutrition.fruits() * MetabolicMath.amplification(state.sugar);
             player.push(player.getLookAngle().x * burst, 0.0, player.getLookAngle().z * burst);
             state.orchardBurstCooldown = (int) (12 * 20 / MetabolicMath.amplification(state.sugar));
-            activation(player, AspectIdentity.MOBILITY, "Orchard leap");
+            activation(player, AspectIdentity.MOBILITY, "Berry leap");
         }
         state.wasOnGround = player.onGround();
         applyIdentityModifiers(player, state, nutrition);
@@ -235,7 +235,7 @@ public final class SalienceEvents {
         double sugar = ConsumableProfiles.sugar(stack);
         if (sugar > 0.0) {
             state.addSugar(sugar);
-            activation(player, AspectIdentity.TEMPO, "Sweetness ×" + String.format("%.1f", MetabolicMath.amplification(state.sugar)));
+            activation(player, AspectIdentity.TEMPO, "Nectar ×" + String.format("%.1f", MetabolicMath.amplification(state.sugar)));
         }
         double alcohol = ConsumableProfiles.alcohol(stack);
         if (alcohol > 0.0) {
@@ -533,7 +533,7 @@ public final class SalienceEvents {
             if (previous >= NutritionTier.FIRST.ordinal() && current == NutritionTier.BUILDING.ordinal()
                     && state.sugar >= .15) {
                 metabolicDiscovery(player, com.bettercontent.bettersurvivalphysiology.api.event.MetabolicDiscoveryEvent.Kind.SUGAR_CRASH,
-                        "Sweetness drained " + NUTRIENT_ASPECTS[index].displayName + " below 20%");
+                        "Nectar drained " + NUTRIENT_ASPECTS[index].displayName + " below 20%");
                 action(player, AspectIdentity.TEMPO, "Nutrition drained");
             }
             if (previous < NutritionTier.SECOND.ordinal() || current >= previous) continue;

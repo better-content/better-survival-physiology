@@ -24,12 +24,15 @@ public final class DietBenefits {
     }
 
     public static String current(AspectIdentity aspect, MetabolicSyncPacket state) {
-        if (aspect == AspectIdentity.TEMPO) return String.format("Other effects ×%.2f; hunger and nutrition drain ×%.2f",
+        if (aspect == AspectIdentity.TEMPO) return String.format("All active nutrition effects ×%.2f; hunger + nutrition drain ×%.2f",
                 MetabolicMath.amplification(state.sugar()), MetabolicMath.sugarDrain(state.sugar()));
         if (aspect == AspectIdentity.CONTROL) return PresentationFlags.has(state.flags(), PresentationFlags.CONTROL_BLACKOUT)
-                ? "Blacked out until Draught falls to 85%"
-                : String.format("Damage reduction %.0f%%; impairment starts above 30%%",
-                MetabolicMath.alcoholReduction(state.alcohol(), state.sugar()) * 100.0);
+                ? "Blackout: no movement or actions until Draught falls below 85%"
+                : String.format("Damage −%.0f%%; move −%.0f%%; attack/use −%.0f%%; resource costs +%.0f%%",
+                MetabolicMath.alcoholReduction(state.alcohol(), state.sugar()) * 100.0,
+                75 * MetabolicMath.alcoholImpairment(state.alcohol(), state.sugar()),
+                90 * MetabolicMath.alcoholImpairment(state.alcohol(), state.sugar()),
+                200 * MetabolicMath.alcoholImpairment(state.alcohol(), state.sugar()));
         return effect(aspect, NutritionTier.of(value(state, aspect)));
     }
 
@@ -37,19 +40,19 @@ public final class DietBenefits {
         if (tier == NutritionTier.BUILDING) return "First ability at 20%";
         int stage = tier.ordinal();
         return switch (aspect) {
-            case IMPACT -> new String[]{"", "Full-charge impact", "Heavy strike after 4s idle", "Heavy strike staggers", "Heavy strike cleaves two nearby foes"}[stage];
-            case WORK -> new String[]{"", "Correct-tool work rhythm", "Rhythm stacks mining speed", "Rhythm lasts through a 5s pause", "Five stacks grant a 5s work burst"}[stage];
-            case MOBILITY -> new String[]{"", "Softer landings", "Half-block stepping", "Stride after 3s sprint", "Sprinting jump gains a burst"}[stage];
-            case ENDURANCE -> new String[]{"", "Hunger costs fall", "Thirst costs fall", "Stamina costs fall", "10s emergency reserve when depleted"}[stage];
-            case ROBUSTNESS -> new String[]{"", "Resist heat and cold drift", "Resist knockback", "Extreme temperature slows less", "Guard one exposure or knockback / 30s"}[stage];
-            case RENEWAL -> new String[]{"", "Meals recover one heart / 30s", "Milk preserves beneficial effects", "Harmful effects fade faster", "Cleanse one harmful effect / 20s"}[stage];
+            case IMPACT -> new String[]{"", "Melee damage +25% × Sinew level; hit knockback +0.15", "After 4s without attacking, a charged hit deals +50% damage; 12s cooldown", "Charged hits add a second stagger impact", "Charged hits splash 35% damage to two foes within 2.5 blocks"}[stage];
+            case WORK -> new String[]{"", "Correct tool: mining speed +60% × Grain level", "Consecutive valid breaks add +10% mining speed each, up to five", "The break sequence survives a 5s pause", "Five valid breaks grant a 5s mining speed burst"}[stage];
+            case MOBILITY -> new String[]{"", "Fall damage falls by 35% × Berry level; movement +20% × level", "Step height rises by half a block × Nectar amplification", "After 3s sprinting, gain another 12% movement speed", "A sprinting jump launches forward; 12s cooldown"}[stage];
+            case ENDURANCE -> new String[]{"", "Hunger cost −40% × Tallow level, capped at 85%", "Thirst cost −40% × Tallow level, capped at 85%", "Stamina cost −40% × Tallow level, capped at 85%", "At low food, thirst, or stamina: 10s reserve; 2m cooldown"}[stage];
+            case ROBUSTNESS -> new String[]{"", "Heat/cold drift falls by up to 50% × Root level", "Knockback resistance +50% × Root level", "Extreme temperature adds movement speed +50% × level", "Block one temperature hit or knockback; 30s cooldown"}[stage];
+            case RENEWAL -> new String[]{"", "Eating heals one heart; 30s cooldown; healing gains +25% × Cream level", "Milk keeps beneficial potion effects", "Harmful potion effects expire two ticks faster per tick", "Remove one harmful effect; 20s cooldown"}[stage];
             case TEMPO, CONTROL -> throw new IllegalArgumentException("Loads use continuous effects");
         };
     }
 
     public static String preparedPromise(AspectIdentity aspect) {
         return switch (aspect) {
-            case TEMPO -> "Sweetness amplifies other effects and burns food faster";
+            case TEMPO -> "Nectar amplifies active nutrition effects and drains food exponentially";
             case CONTROL -> "Draught reduces damage but steadily impairs control";
             default -> aspect.displayName + ": " + effect(aspect, NutritionTier.SECOND);
         };
@@ -57,20 +60,29 @@ public final class DietBenefits {
 
     public static List<GuideTier> guide(AspectIdentity aspect, MetabolicSyncPacket state) {
         float value = value(state, aspect);
-        if (aspect == AspectIdentity.TEMPO) return List.of(
-                new GuideTier("Benefit", -1, String.format("All unlocked effects ×%.2f", MetabolicMath.amplification(value)), true),
-                new GuideTier("Cost", -1, String.format("Hunger and nutrition drain ×%.2f", MetabolicMath.sugarDrain(value)), true));
-        if (aspect == AspectIdentity.CONTROL) return List.of(
-                new GuideTier("Guard", -1, String.format("Damage reduction %.0f%% (40%% cap)", MetabolicMath.alcoholReduction(value, state.sugar()) * 100), true),
-                new GuideTier("30%", .30f, "Control penalties begin above 30%", value > .30f),
-                new GuideTier("50%", .50f, "Penalties become significant", value >= .50f),
-                new GuideTier("90%", .90f, "Severe control loss", value >= .90f),
-                new GuideTier("100%", 1.0f, "Blackout until load falls to 85%", value >= 1.0f));
+        if (aspect == AspectIdentity.TEMPO || aspect == AspectIdentity.CONTROL) return List.of(
+                continuousGuide(aspect, .20f, state), continuousGuide(aspect, .40f, state),
+                continuousGuide(aspect, .60f, state), continuousGuide(aspect, .80f, state));
         NutritionTier tier = NutritionTier.of(value);
         return List.of(
                 new GuideTier("20%", .20f, effect(aspect, NutritionTier.FIRST), tier == NutritionTier.FIRST),
                 new GuideTier("40%", .40f, effect(aspect, NutritionTier.SECOND), tier == NutritionTier.SECOND),
                 new GuideTier("60%", .60f, effect(aspect, NutritionTier.THIRD), tier == NutritionTier.THIRD),
                 new GuideTier("80%", .80f, effect(aspect, NutritionTier.FOURTH), tier == NutritionTier.FOURTH));
+    }
+
+    private static GuideTier continuousGuide(AspectIdentity aspect, float sample, MetabolicSyncPacket state) {
+        String effect;
+        if (aspect == AspectIdentity.TEMPO) {
+            effect = String.format("Effects ×%.2f; Hunger + nutrition drain ×%.2f",
+                    MetabolicMath.amplification(sample), MetabolicMath.sugarDrain(sample));
+        } else {
+            double impairment = MetabolicMath.alcoholImpairment(sample, state.sugar());
+            effect = String.format("Damage −%.0f%%; move −%.0f%%; attack/use −%.0f%%; costs +%.0f%%",
+                    100 * MetabolicMath.alcoholReduction(sample, state.sugar()),
+                    75 * impairment, 90 * impairment, 200 * impairment);
+        }
+        return new GuideTier(Math.round(sample * 100) + "%", sample, effect,
+                value(state, aspect) >= sample);
     }
 }
