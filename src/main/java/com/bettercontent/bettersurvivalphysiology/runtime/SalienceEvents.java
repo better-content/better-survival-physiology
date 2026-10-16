@@ -13,7 +13,6 @@ import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicStateStore
 import com.bettercontent.bettersurvivalphysiology.mixin.MobEffectInstanceAccessor;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
 import com.bettercontent.bettersurvivalphysiology.network.SalienceNetwork;
-import com.bettercontent.bettersurvivalphysiology.network.MealFeedbackPacket;
 import com.bettercontent.bettersurvivalphysiology.nutrition.DietBridge;
 import com.bettercontent.bettersurvivalphysiology.nutrition.NutritionDrain;
 import com.bettercontent.bettersurvivalphysiology.nutrition.NutritionSnapshot;
@@ -479,7 +478,6 @@ public final class SalienceEvents {
         if (start.edible() && DietBridge.tracker(player).isPresent()) {
             NutritionThreadBoundary.onMealSettled(player, start.nutrition(), current, ordinary());
         }
-        PresentationSnapshot presentation = PresentationSnapshot.create(player, current, state);
         int changedMask = 0;
         NutritionTier highestCrossing = null;
         AspectIdentity audibleAspect = null;
@@ -501,11 +499,6 @@ public final class SalienceEvents {
         boolean sugarChanged = state.sugar > start.sugar() + .001;
         boolean alcoholChanged = state.alcohol > start.alcohol() + .001;
         if (changedMask == 0 && !sugarChanged && !alcoholChanged) return;
-        int[] seconds = presentation.nutrientSeconds();
-        SalienceNetwork.meal(player, new MealFeedbackPacket(changedMask,
-                new float[]{current.proteins(), current.grains(), current.fruits(), current.fats(), current.vegetables(), current.dairy()},
-                seconds, sugarChanged, alcoholChanged, (float) state.sugar, (float) state.alcohol,
-                presentation.sugarSeconds(), presentation.alcoholSeconds()));
         SalienceNetwork.sync(player, current, state);
     }
 

@@ -11,7 +11,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class SalienceNetwork {
-    private static final String PROTOCOL = "4";
+    private static final String PROTOCOL = "5";
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(SystemicSalienceMod.MOD_ID, "main"),
             () -> PROTOCOL,
@@ -24,8 +24,6 @@ public final class SalienceNetwork {
     public static void init() {
         CHANNEL.registerMessage(0, MetabolicSyncPacket.class,
                 MetabolicSyncPacket::encode, MetabolicSyncPacket::decode, MetabolicSyncPacket::handle);
-        CHANNEL.registerMessage(1, MealFeedbackPacket.class,
-                MealFeedbackPacket::encode, MealFeedbackPacket::decode, MealFeedbackPacket::handle);
     }
 
     public static void sync(ServerPlayer player, NutritionSnapshot nutrition, MetabolicState state) {
@@ -40,7 +38,4 @@ public final class SalienceNetwork {
         ));
     }
 
-    public static void meal(ServerPlayer player, MealFeedbackPacket packet) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
-    }
 }
