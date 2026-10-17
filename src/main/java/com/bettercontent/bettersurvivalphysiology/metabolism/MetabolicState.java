@@ -37,8 +37,9 @@ public final class MetabolicState {
     public transient byte[] lastNutritionTiers = {-1, -1, -1, -1, -1, -1};
 
     public void tickTransient() {
+        // All loads use the same sugar level from the start of this tick.
+        alcohol = MetabolicMath.tickAlcohol(alcohol, sugar);
         sugar = MetabolicMath.tickSugar(sugar);
-        alcohol = MetabolicMath.tickAlcohol(alcohol);
         if (blackout && alcohol <= 0.85) blackout = false;
         heavyBlowCooldown = decrement(heavyBlowCooldown);
         enduranceReserveCooldown = decrement(enduranceReserveCooldown);

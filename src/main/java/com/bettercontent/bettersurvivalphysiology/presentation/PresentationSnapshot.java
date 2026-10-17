@@ -33,6 +33,6 @@ public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSe
         }
         return new PresentationSnapshot(flags, state.workSequence, estimates,
                 NutritionEstimates.sugarSeconds(state.sugar),
-                NutritionEstimates.alcoholSeconds(state.alcohol), (float) ordinary, (float) prepared, (float) feast);
+                NutritionEstimates.alcoholSeconds(state.alcohol, state.sugar), (float) ordinary, (float) prepared, (float) feast);
     }
 }

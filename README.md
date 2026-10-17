@@ -16,6 +16,11 @@ Each ordinary food group owns one behavioral identity: Proteins are Impact, Grai
 Fruits are Mobility, Fats are Endurance, Vegetables are Robustness, and Dairy is Renewal.
 Sugar expresses Tempo by amplifying and spending the state already built; Alcohol expresses
 Control through its useful midpoint and independently rising impairment.
+Sugar's exponential consumption multiplier (`8^load`) applies uniformly to the six ordinary
+nutrients, sugar's own decay, and alcohol clearance. Sugar retains its baseline exponential
+decay curve and alcohol its linear clearance curve, but both run faster while sugar is present;
+the sugar multiplier is recalculated as sugar falls. The configured sugar half-life is the
+baseline before this self-acceleration, not a guaranteed wall-clock half-life.
 
 Opening Diet uses Diet's native screen and navigation. Better Survival Physiology no longer replaces that
 screen or adds a separate metabolism panel; its gameplay effects and contextual feedback continue

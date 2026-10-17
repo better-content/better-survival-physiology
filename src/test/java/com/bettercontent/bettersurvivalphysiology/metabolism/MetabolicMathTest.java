@@ -41,11 +41,18 @@ class MetabolicMathTest {
     }
 
     @Test
-    void halfLivesMatchTheDesignContract() {
+    void sugarAccelerationAlsoAppliesToItsOwnDecayAndAlcohol() {
+        for (double sugar : new double[]{0.0, .25, .6, 1.0}) {
+            assertEquals(sugar * Math.pow(.5, MetabolicMath.sugarDrain(sugar)
+                    / MetabolicMath.SUGAR_HALF_LIFE_TICKS), MetabolicMath.tickSugar(sugar), 1.0e-12);
+            assertEquals(MetabolicMath.sugarDrain(sugar) / MetabolicMath.ALCOHOL_CLEAR_TICKS,
+                    .8 - MetabolicMath.tickAlcohol(.8, sugar), 1.0e-12);
+        }
+        assertEquals(0.0, MetabolicMath.tickSugar(0.0));
+        assertEquals(0.0, MetabolicMath.tickAlcohol(0.0, 1.0));
         double sugar = 1.0;
         for (int i = 0; i < MetabolicMath.SUGAR_HALF_LIFE_TICKS; i++) sugar = MetabolicMath.tickSugar(sugar);
-        assertEquals(0.5, sugar, 1.0e-8);
-
+        assertTrue(sugar < .5, "Self-acceleration must shorten the baseline half-life");
     }
 
     private static boolean hasPublicMethod(String source, String name) {

@@ -26,11 +26,11 @@ public final class MetabolicMath {
 
     public static double tickSugar(double sugar) {
         int halfLife = ticks(configured(SalienceConfig.SUGAR_HALF_LIFE_MINUTES, 4.0));
-        return clamp01(sugar * Math.pow(0.5, 1.0 / halfLife));
+        return clamp01(sugar * Math.pow(0.5, sugarDrain(sugar) / halfLife));
     }
 
-    public static double tickAlcohol(double alcohol) {
-        return clamp01(alcohol - 1.0 / ticks(configured(SalienceConfig.ALCOHOL_CLEAR_MINUTES, 20.0)));
+    public static double tickAlcohol(double alcohol, double sugar) {
+        return clamp01(alcohol - sugarDrain(sugar) / ticks(configured(SalienceConfig.ALCOHOL_CLEAR_MINUTES, 20.0)));
     }
 
     public static double clamp01(double value) {
