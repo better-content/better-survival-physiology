@@ -11,7 +11,8 @@
     "ThirstExhaustionMixin"
   ],
   "client": [
-    "DietScreenAccessor"
+    "DietScreenAccessor",
+    "DietFoodTooltipMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -46,6 +46,12 @@ checked-in CC0 excerpts, exact hashes, and source provenance live under `audio/`
 
 World owners can tune optional sugar/alcohol half-lives, threshold cues, and `item_id=load` alcohol profiles in `better_survival_physiology-server.toml`; Diet owns nutrition values, decay, effects, and saves. Defaults remain the authored Better Content balance contract, so ordinary iteration does not require a mod rebuild.
 
+Food hover uses one horizontal `Nourishes:` row with graphical aspect badges, pack names,
+and per-serving percentage gains. Diet supplies the six ordinary gains; Nectar and Draught
+use the actual consumption loads, and milk shows its direct Cream/Tallow award. This replaces
+Diet's vertical default-name list, blank separator and “When eaten” heading; it does not add
+ASCII aspect glyphs or nutrient-effect prose. Diet's native screen remains unchanged.
+
 It is not a global aspect registry and the other Better Content mods do not depend on it.
 
 ## Build

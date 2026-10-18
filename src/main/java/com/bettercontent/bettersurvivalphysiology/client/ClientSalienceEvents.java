@@ -4,11 +4,10 @@ import com.bettercontent.bettersurvivalphysiology.SystemicSalienceMod;
 import com.bettercontent.bettersurvivalphysiology.metabolism.ConsumableProfiles;
 import com.bettercontent.bettersurvivalphysiology.network.MetabolicSyncPacket;
 import com.bettercontent.bettersurvivalphysiology.presentation.AspectIdentity;
-import com.bettercontent.bettersurvivalphysiology.presentation.DietBenefits;
+import com.bettercontent.bettersurvivalphysiology.presentation.FoodNutrients;
 import com.bettercontent.bettersurvivalphysiology.presentation.PresentationFlags;
 import com.bettercontent.bettersurvivalphysiology.presentation.NutritionHud;
 import com.illusivesoulworks.diet.api.DietApi;
-import com.illusivesoulworks.diet.api.type.IDietGroup;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -20,8 +19,8 @@ import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @Mod.EventBusSubscriber(modid = SystemicSalienceMod.MOD_ID, value = Dist.CLIENT)
 public final class ClientSalienceEvents {
@@ -62,30 +61,24 @@ public final class ClientSalienceEvents {
     public static void onTooltip(ItemTooltipEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || !minecraft.isSameThread()) return;
-        List<AspectIdentity> identities = new ArrayList<>();
+        Map<String, Double> gains = new HashMap<>();
         try {
-            for (IDietGroup group : DietApi.getInstance().getGroups(minecraft.player, event.getItemStack())) {
-                AspectIdentity identity = AspectIdentity.fromGroupName(group.getName());
-                if (identity != null && !identities.contains(identity)) identities.add(identity);
-            }
+            DietApi.getInstance().get(minecraft.player, event.getItemStack()).get()
+                    .forEach((group, gain) -> gains.put(group.getName(), gain.doubleValue()));
         } catch (RuntimeException ignored) { return; }
-        if (ConsumableProfiles.sugar(event.getItemStack()) > 0 && !identities.contains(AspectIdentity.TEMPO)) identities.add(AspectIdentity.TEMPO);
-        if (ConsumableProfiles.isAlcohol(event.getItemStack()) && !identities.contains(AspectIdentity.CONTROL)) identities.add(AspectIdentity.CONTROL);
-        if (identities.isEmpty()) return;
-        identities.sort(AspectIdentity.displayOrder());
+        var entries = FoodNutrients.entries(gains, ConsumableProfiles.sugar(event.getItemStack()),
+                ConsumableProfiles.alcohol(event.getItemStack()), event.getItemStack().is(net.minecraft.world.item.Items.MILK_BUCKET));
+        if (entries.isEmpty()) return;
         MutableComponent line = Component.literal("Nourishes: ").withStyle(style -> style.withColor(0x999999));
-        for (int index = 0; index < identities.size(); index++) {
-            AspectIdentity identity = identities.get(index);
+        for (int index = 0; index < entries.size(); index++) {
+            var entry = entries.get(index);
+            AspectIdentity identity = entry.aspect();
             if (index > 0) line.append(Component.literal(" · ").withStyle(style -> style.withColor(0x777777)));
-            line.append(Component.literal(identity.displayName + " — ").withStyle(style -> style.withColor(identity.color)))
-                    .append(Component.literal(identity.badge()).withStyle(style -> style.withFont(ASPECT_FONT)))
-                    .append(Component.literal(" " + identity.glyph).withStyle(style -> style.withColor(identity.color)));
+            line.append(Component.literal(identity.badge()).withStyle(style -> style.withFont(ASPECT_FONT)))
+                    .append(Component.literal(" " + identity.displayName).withStyle(style -> style.withColor(identity.color)))
+                    .append(Component.literal(" " + entry.percentage()).withStyle(style -> style.withColor(0xD8D5CE)));
         }
         event.getToolTip().add(line);
-        AspectIdentity first = identities.get(0);
-        String promise = DietBenefits.preparedPromise(first);
-        event.getToolTip().add(Component.literal(promise + (identities.size() > 1 ? " · See Diet for all effects" : ""))
-                .withStyle(style -> style.withColor(0xD8D5CE)));
     }
 
 }

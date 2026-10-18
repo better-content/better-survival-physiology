@@ -50,10 +50,11 @@ repositories {
 }
 
 // Raw pinned native bytecode is a declared test input, never a retained audit dump.
-configurations { nativeEpicFight }
+configurations { nativeEpicFight; nativeDiet }
 
 dependencies {
     nativeEpicFight('curse.maven:epic-fight-mod-405076:8049910') { transitive = false }
+    nativeDiet('curse.maven:diet-443570:4813904') { transitive = false }
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
@@ -85,9 +86,10 @@ tasks.withType(JavaCompile).configureEach {
 
 test {
     useJUnitPlatform()
-    inputs.files(configurations.nativeEpicFight)
+    inputs.files(configurations.nativeEpicFight, configurations.nativeDiet)
     doFirst {
         systemProperty 'salience.nativeEpicFight', configurations.nativeEpicFight.singleFile.absolutePath
+        systemProperty 'salience.nativeDiet', configurations.nativeDiet.singleFile.absolutePath
     }
 }
 
