@@ -80,6 +80,8 @@ class FoodNutrientsTest {
         assertTrue(client.contains("identity.badge()"));
         assertTrue(client.contains("withFont(ASPECT_FONT)"));
         assertTrue(client.contains("entry.percentage()"));
+        assertFalse(client.contains("Nourishes:"));
+        assertTrue(client.contains("MutableComponent line = Component.empty();"));
         assertFalse(client.contains("identity.glyph"));
         assertFalse(client.contains("preparedPromise"));
         assertFalse(client.contains("See Diet for all effects"));

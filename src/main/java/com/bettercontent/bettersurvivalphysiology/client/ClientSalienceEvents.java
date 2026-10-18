@@ -69,7 +69,7 @@ public final class ClientSalienceEvents {
         var entries = FoodNutrients.entries(gains, ConsumableProfiles.sugar(event.getItemStack()),
                 ConsumableProfiles.alcohol(event.getItemStack()), event.getItemStack().is(net.minecraft.world.item.Items.MILK_BUCKET));
         if (entries.isEmpty()) return;
-        MutableComponent line = Component.literal("Nourishes: ").withStyle(style -> style.withColor(0x999999));
+        MutableComponent line = Component.empty();
         for (int index = 0; index < entries.size(); index++) {
             var entry = entries.get(index);
             AspectIdentity identity = entry.aspect();
