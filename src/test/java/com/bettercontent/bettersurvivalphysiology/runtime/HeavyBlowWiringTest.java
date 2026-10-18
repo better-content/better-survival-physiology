@@ -24,9 +24,9 @@ class HeavyBlowWiringTest {
                 events.indexOf("public static void onMeleeDamage("));
         assertTrue(attack.contains("HeavyBlow.ready(proteins, SalienceConfig.SECOND, state.heavyBlowCooldown,"));
         assertTrue(attack.contains("player.getAttackStrengthScale(0.5f), state.blackout)"));
-        // Epic Fight's stun may succeed or fail; neither result controls/duplicates the cue.
-        assertTrue(attack.contains("impactApplied = EpicFightCompat.tryImpact(target, 1.0);\n            cueAt("));
-        assertTrue(attack.contains("if (force > 0.0) target.knockback(force,"));
+        // Nutrition owns damage; RPG Strength owns stagger and knockback.
+        assertFalse(attack.contains("EpicFightCompat.tryImpact"));
+        assertFalse(attack.contains("target.knockback("));
         assertEquals(1, occurrences(events, "cueAt(player, AspectIdentity.IMPACT, \"Heavy Blow\""));
         assertEquals(1, occurrences(events, "activation(player, AspectIdentity.IMPACT, \"Heavy Blow ready\")"));
         assertTrue(attack.contains("state.heavyBlowFeedback.attacked();"));

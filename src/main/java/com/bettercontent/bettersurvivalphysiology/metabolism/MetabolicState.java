@@ -25,6 +25,8 @@ public final class MetabolicState {
     public int workBurstTicks;
     public int orchardBurstCooldown;
     public int mealRecoveryCooldown;
+    public transient double renewalExpiryRemainder;
+    public transient boolean nutritionSplash;
     public boolean wasOnGround;
     public double blackoutX;
     public double blackoutY;
@@ -51,6 +53,13 @@ public final class MetabolicState {
         workBurstTicks = decrement(workBurstTicks);
         orchardBurstCooldown = decrement(orchardBurstCooldown);
         mealRecoveryCooldown = decrement(mealRecoveryCooldown);
+    }
+
+    public int renewalExtraTicks(double dairy) {
+        renewalExpiryRemainder += NutritionEffects.harmfulExpiryBonus(dairy, sugar);
+        int ticks = (int) renewalExpiryRemainder;
+        renewalExpiryRemainder -= ticks;
+        return ticks;
     }
 
     public void addSugar(double amount) {

@@ -17,7 +17,7 @@ public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSe
         if (HeavyBlow.ready(nutrition.proteins(), prepared, state.heavyBlowCooldown,
                 player.level().getGameTime(), state.lastAttackTick,
                 player.getAttackStrengthScale(0.5f), state.blackout)) flags |= PresentationFlags.IMPACT_READY;
-        if (nutrition.fruits() >= SalienceConfig.THIRD && state.sprintTicks >= 60) flags |= PresentationFlags.MOBILITY_STRIDE;
+        if (nutrition.fruits() >= SalienceConfig.SECOND && state.sprintTicks >= 60) flags |= PresentationFlags.MOBILITY_STRIDE;
         if (nutrition.fats() >= feast && state.enduranceReserveCooldown == 0) flags |= PresentationFlags.ENDURANCE_READY;
         if (state.enduranceReserveTicks > 0) flags |= PresentationFlags.ENDURANCE_ACTIVE;
         if (nutrition.vegetables() >= feast && state.weatheredCooldown == 0) flags |= PresentationFlags.ROBUSTNESS_READY;
@@ -28,9 +28,11 @@ public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSe
 
         double[] values = {nutrition.proteins(), nutrition.grains(), nutrition.fruits(), nutrition.fats(), nutrition.vegetables(), nutrition.dairy()};
         int[] estimates = new int[values.length];
+        AspectIdentity[] aspects = {AspectIdentity.IMPACT, AspectIdentity.WORK, AspectIdentity.MOBILITY,
+                AspectIdentity.ENDURANCE, AspectIdentity.ROBUSTNESS, AspectIdentity.RENEWAL};
         for (int index = 0; index < values.length; index++) {
-            NutritionTier tier = NutritionTier.of(values[index]);
-            estimates[index] = NutritionEstimates.nutrientSeconds(values[index], tier.floor(), state.sugar);
+            double floor = DietBenefits.activePerkFloor(aspects[index], values[index]);
+            estimates[index] = floor > 0 ? NutritionEstimates.nutrientSeconds(values[index], floor, state.sugar) : -1;
         }
         return new PresentationSnapshot(flags, state.workSequence, estimates,
                 NutritionEstimates.sugarSeconds(state.sugar),

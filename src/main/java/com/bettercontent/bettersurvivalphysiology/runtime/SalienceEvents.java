@@ -8,10 +8,10 @@ import com.bettercontent.bettersurvivalphysiology.compat.ThirstCompat;
 import com.bettercontent.bettersurvivalphysiology.config.SalienceConfig;
 import com.bettercontent.bettersurvivalphysiology.metabolism.ConsumableProfiles;
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicMath;
+import com.bettercontent.bettersurvivalphysiology.metabolism.NutritionEffects;
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicState;
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicStateStore;
 import com.bettercontent.bettersurvivalphysiology.mixin.MobEffectInstanceAccessor;
-import net.minecraftforge.event.entity.living.MobEffectEvent;
 import com.bettercontent.bettersurvivalphysiology.network.SalienceNetwork;
 import com.bettercontent.bettersurvivalphysiology.nutrition.DietBridge;
 import com.bettercontent.bettersurvivalphysiology.nutrition.NutritionDrain;
@@ -40,9 +40,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.living.LivingHealEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
-import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -63,13 +61,9 @@ import java.util.UUID;
 public final class SalienceEvents {
     private static final UUID FRUIT_MOVE = UUID.fromString("613818db-da4d-42f6-ac8e-dd9c7f226c1c");
     private static final UUID FRUIT_SWIM = UUID.fromString("0d498917-ed03-4503-a129-4d403c947398");
-    private static final UUID FRUIT_STEP = UUID.fromString("426336df-f8cb-42af-9fe8-a57797e8fcf3");
     private static final UUID ALCOHOL_MOVE = UUID.fromString("737044e1-940d-4ddb-beb3-bd968cdfa08d");
-    private static final UUID GARDEN_EXTREME_MOVE = UUID.fromString("f28d33da-7708-43a2-a4f2-4e29969048e8");
-    private static final UUID VEGETABLE_KNOCKBACK = UUID.fromString("bd4c1015-e215-4fd1-bbc7-a47aca7cd645");
     private static final UUID ALCOHOL_USE_SPEED = UUID.fromString("3295f760-2016-4cbb-8803-331b8b17e9b5");
     private static final UUID ALCOHOL_ATTACK_TIMING = UUID.fromString("fb8c17f4-59c7-4cb4-b6e9-c31316286787");
-    private static final MilkEffectGuard MILK_EFFECT_GUARD = new MilkEffectGuard();
     private static final Map<UUID, ConsumptionStart> CONSUMPTION_STARTS = new HashMap<>();
     private static final Map<UUID, PendingMeal> PENDING_MEALS = new HashMap<>();
     private static final Map<UUID, Map<MobEffect, EffectStamp>> FRUIT_EFFECT_STARTS = new HashMap<>();
@@ -151,10 +145,10 @@ public final class SalienceEvents {
         MetabolicState state = MetabolicStateStore.get(player);
         if (state.blackout) { event.setNewSpeed(0.0f); return; }
         double grains = DietBridge.snapshot(player).actual(NutritionSnapshot.Group.GRAINS);
-        double bonus = grains >= SalienceConfig.FIRST && player.hasCorrectToolForDrops(event.getState())
-                ? 0.60 * grains * MetabolicMath.amplification(state.sugar) : 0.0;
-        if (grains >= SalienceConfig.SECOND) bonus += 0.10 * state.workSequence * MetabolicMath.amplification(state.sugar);
-        if (grains >= SalienceConfig.FOURTH && state.workBurstTicks > 0) bonus += MetabolicMath.amplification(state.sugar);
+        boolean correctTool = player.hasCorrectToolForDrops(event.getState());
+        double bonus = correctTool ? NutritionEffects.miningSpeed(grains, state.sugar) : 0.0;
+        if (correctTool && grains >= SalienceConfig.SECOND) bonus += 0.10 * state.workSequence * MetabolicMath.amplification(state.sugar);
+        if (correctTool && grains >= SalienceConfig.FOURTH && state.workBurstTicks > 0) bonus += MetabolicMath.amplification(state.sugar);
         event.setNewSpeed((float) (event.getNewSpeed() * Math.max(0.05,
                 1.0 - 0.90 * MetabolicMath.alcoholImpairment(state.alcohol, state.sugar))));
         event.setNewSpeed((float) (event.getNewSpeed() * (1.0 + bonus)));
@@ -166,7 +160,7 @@ public final class SalienceEvents {
         MetabolicState state = MetabolicStateStore.get(player);
         double grains = DietBridge.snapshot(player).actual(NutritionSnapshot.Group.GRAINS);
         if (state.blackout) { event.setCanceled(true); return; }
-        if (grains < SalienceConfig.FIRST || !player.hasCorrectToolForDrops(event.getState())) {
+        if (grains < SalienceConfig.SECOND || !player.hasCorrectToolForDrops(event.getState())) {
             state.workSequence = 0;
             return;
         }
@@ -197,26 +191,11 @@ public final class SalienceEvents {
                     DietBridge.snapshot(player), state.sugar, state.alcohol, stack.isEdible()));
             if (isFruitFood(stack)) FRUIT_EFFECT_STARTS.put(player.getUUID(), snapshotEffects(player));
         }
-        if (stack.is(net.minecraft.world.item.Items.MILK_BUCKET)
-                && DietBridge.snapshot(player).actual(NutritionSnapshot.Group.DAIRY) >= SalienceConfig.SECOND) {
-            // Guard removal itself: restoring through addEffect would cross RPG Stats Vitality's
-            // duration-scaling hook and change the original expiry.
-            MILK_EFFECT_GUARD.begin(player.getUUID());
-        }
-    }
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void preserveMilkEffects(MobEffectEvent.Remove event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        if (!MILK_EFFECT_GUARD.isGuarding(player.getUUID())) return;
-        MobEffectInstance effect = event.getEffectInstance();
-        if (effect != null && effect.getEffect().isBeneficial()) event.setCanceled(true);
     }
 
     @SubscribeEvent
     public static void onUseStop(LivingEntityUseItemEvent.Stop event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            if (event.getItem().is(net.minecraft.world.item.Items.MILK_BUCKET)) MILK_EFFECT_GUARD.clear(player.getUUID());
             FRUIT_EFFECT_STARTS.remove(player.getUUID());
         }
     }
@@ -247,22 +226,9 @@ public final class SalienceEvents {
         if (sugar > 0.0 || alcohol > 0.0) DietBridge.syncMetabolic(player, state);
         if (stack.is(net.minecraft.world.item.Items.MILK_BUCKET)) {
             DietBridge.awardMilk(player);
-            if (MILK_EFFECT_GUARD.isGuarding(player.getUUID())) {
-                MILK_EFFECT_GUARD.clear(player.getUUID());
-                activation(player, AspectIdentity.RENEWAL, "Benefits preserved");
-            }
         }
         ConsumptionStart start = CONSUMPTION_STARTS.remove(player.getUUID());
         if (start != null) PENDING_MEALS.put(player.getUUID(), new PendingMeal(start, player.level().getGameTime() + 1L));
-    }
-
-    @SubscribeEvent
-    public static void onHeal(LivingHealEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        double dairy = DietBridge.snapshot(player).dairy();
-        if (dairy >= SalienceConfig.FIRST)
-            event.setAmount((float) (event.getAmount() * (1.0 + .25 * dairy
-                    * MetabolicMath.amplification(MetabolicStateStore.get(player).sugar))));
     }
 
     @SubscribeEvent
@@ -292,26 +258,16 @@ public final class SalienceEvents {
         MetabolicState state = MetabolicStateStore.get(player);
         if (state.blackout) { event.setCanceled(true); return; }
         double proteins = DietBridge.snapshot(player).actual(NutritionSnapshot.Group.PROTEINS);
-        double force = proteins >= SalienceConfig.FIRST ? .15 * MetabolicMath.amplification(state.sugar) : 0.0;
         long now = player.level().getGameTime();
         boolean heavy = HeavyBlow.ready(proteins, SalienceConfig.SECOND, state.heavyBlowCooldown,
                 now, state.lastAttackTick, player.getAttackStrengthScale(0.5f), state.blackout);
-        var motionBefore = target.getDeltaMovement();
-        boolean impactApplied = false;
         if (heavy) {
-            force += .4;
             state.heavyBlowCooldown = (int) (12 * 20 / MetabolicMath.amplification(state.sugar));
             state.heavyBlowTarget = target.getUUID();
             state.heavyBlowAttackTick = now;
-            impactApplied = EpicFightCompat.tryImpact(target, 1.0);
             cueAt(player, AspectIdentity.IMPACT, "Heavy Blow", target.getX(),
                     target.getY() + target.getBbHeight() * .6, target.getZ(), 14);
-        } else if (force > 0.0) {
-            EpicFightCompat.applyImpact(target, force);
         }
-        if (force > 0.0) target.knockback(force, player.getX() - target.getX(), player.getZ() - target.getZ());
-        if (heavy && (impactApplied || !motionBefore.equals(target.getDeltaMovement())))
-            metabolicDiscovery(player, com.bettercontent.bettersurvivalphysiology.api.event.MetabolicDiscoveryEvent.Kind.HEAVY_BLOW, target.getName().getString());
         state.lastAttackTick = now;
         state.heavyBlowFeedback.attacked();
     }
@@ -321,34 +277,29 @@ public final class SalienceEvents {
         if (!(event.getSource().getEntity() instanceof ServerPlayer player)
                 || event.getSource().getDirectEntity() != player) return;
         double proteins = DietBridge.snapshot(player).actual(NutritionSnapshot.Group.PROTEINS);
-        if (proteins < SalienceConfig.FIRST) return;
         MetabolicState state = MetabolicStateStore.get(player);
+        if (state.nutritionSplash) return; // Splash already includes the originating strike's nutrition.
         boolean heavy = proteins >= SalienceConfig.SECOND && event.getEntity().getUUID().equals(state.heavyBlowTarget)
                 && player.level().getGameTime() == state.heavyBlowAttackTick;
         float base = event.getAmount();
         double amp = MetabolicMath.amplification(state.sugar);
-        float boosted = (float) (base * (1.0 + .25 * proteins * amp) * (heavy ? 1.0 + .5 * amp : 1.0));
+        float boosted = (float) (base * (1.0 + NutritionEffects.meleeDamage(proteins, state.sugar))
+                * (heavy ? 1.0 + .5 * amp : 1.0));
         event.setAmount(boosted);
-        if (proteins >= SalienceConfig.THIRD && heavy) EpicFightCompat.tryImpact(event.getEntity(), .7);
-        if (proteins >= SalienceConfig.FOURTH && heavy) {
-            int cleaved = 0;
-            for (LivingEntity nearby : player.level().getEntitiesOfClass(LivingEntity.class,
-                    event.getEntity().getBoundingBox().inflate(2.5), entity -> entity != event.getEntity() && entity != player && entity.isAlive())) {
-                nearby.hurt(player.damageSources().playerAttack(player), (float) (boosted * .35 * amp));
-                if (++cleaved >= 2) break;
-            }
-        }
+        if (heavy) metabolicDiscovery(player, com.bettercontent.bettersurvivalphysiology.api.event.MetabolicDiscoveryEvent.Kind.HEAVY_BLOW, event.getEntity().getName().getString());
         if (heavy) state.heavyBlowTarget = null;
-    }
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onKnockback(LivingKnockBackEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        MetabolicState state = MetabolicStateStore.get(player);
-        if (DietBridge.snapshot(player).actual(NutritionSnapshot.Group.VEGETABLES) >= SalienceConfig.FOURTH && state.weatheredCooldown == 0) {
-            event.setCanceled(true);
-            state.weatheredCooldown = (int) (30 * 20 / MetabolicMath.amplification(state.sugar));
-            activation(player, AspectIdentity.ROBUSTNESS, "Weathered Guard");
+        if (proteins >= SalienceConfig.FOURTH && heavy) {
+            state.nutritionSplash = true;
+            try {
+                int cleaved = 0;
+                for (LivingEntity nearby : player.level().getEntitiesOfClass(LivingEntity.class,
+                        event.getEntity().getBoundingBox().inflate(2.5), entity -> entity != event.getEntity() && entity != player && entity.isAlive())) {
+                    nearby.hurt(player.damageSources().playerAttack(player), (float) (boosted * .35 * amp));
+                    if (++cleaved >= 2) break;
+                }
+            } finally {
+                state.nutritionSplash = false;
+            }
         }
     }
 
@@ -383,9 +334,6 @@ public final class SalienceEvents {
     @SubscribeEvent
     public static void onClone(PlayerEvent.Clone event) {
         if (!(event.getEntity() instanceof ServerPlayer replacement)) return;
-        // Death clones retain the player's UUID. A use interrupted by death must not preserve
-        // a milk guard into the replacement's later effect removals.
-        MILK_EFFECT_GUARD.clear(replacement.getUUID());
         CONSUMPTION_STARTS.remove(replacement.getUUID());
         PENDING_MEALS.remove(replacement.getUUID());
         FRUIT_EFFECT_STARTS.remove(replacement.getUUID());
@@ -401,7 +349,6 @@ public final class SalienceEvents {
         MetabolicStateStore.save(player);
         MetabolicStateStore.unload(player);
         ColdSweatCompat.unload(player);
-        MILK_EFFECT_GUARD.clear(player.getUUID());
         CONSUMPTION_STARTS.remove(player.getUUID());
         PENDING_MEALS.remove(player.getUUID());
         FRUIT_EFFECT_STARTS.remove(player.getUUID());
@@ -411,18 +358,13 @@ public final class SalienceEvents {
     private static void applyIdentityModifiers(ServerPlayer player, MetabolicState state, NutritionSnapshot nutrition) {
         double fruits = nutrition.actual(NutritionSnapshot.Group.FRUITS);
         double amplification = MetabolicMath.amplification(state.sugar);
-        double movement = fruits >= SalienceConfig.FIRST ? .20 * fruits * amplification
-                + (fruits >= SalienceConfig.THIRD && state.sprintTicks >= 60 ? .12 * amplification : 0.0) : 0.0;
-        double step = fruits >= SalienceConfig.SECOND ? .5 * amplification : 0.0;
+        double movement = NutritionEffects.movementSpeed(fruits, state.sugar)
+                + (fruits >= SalienceConfig.SECOND && state.sprintTicks >= 60 ? .12 * amplification : 0.0);
         updateAttribute(player, "minecraft:generic.movement_speed", FRUIT_MOVE, movement, AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_fruit_stride");
         updateAttribute(player, "forge:swim_speed", FRUIT_SWIM, movement, AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_fruit_swim");
-        updateAttribute(player, "forge:step_height_addition", FRUIT_STEP, step, AttributeModifier.Operation.ADDITION, "salience_fruit_step");
 
         double vegetables = nutrition.actual(NutritionSnapshot.Group.VEGETABLES);
-        updateAttribute(player, "minecraft:generic.knockback_resistance", VEGETABLE_KNOCKBACK,
-                vegetables >= SalienceConfig.SECOND ? .5 * vegetables * amplification : 0.0,
-                AttributeModifier.Operation.ADDITION, "salience_vegetable_weathered");
-        double driftResistance = vegetables >= SalienceConfig.FIRST ? Math.min(.9, .5 * vegetables * amplification) : 0.0;
+        double driftResistance = NutritionEffects.temperatureResistance(vegetables, state.sugar);
         if (driftResistance > 0.0) ColdSweatCompat.dampenDrift(player, driftResistance);
         double impairment = MetabolicMath.alcoholImpairment(state.alcohol, state.sugar);
         updateAttribute(player, "minecraft:generic.movement_speed", ALCOHOL_MOVE,
@@ -432,9 +374,6 @@ public final class SalienceEvents {
                 "salience_alcohol_timing");
         updateAttribute(player, "tconstruct:player.use_item_speed", ALCOHOL_USE_SPEED,
                 -.90 * impairment, AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_alcohol_use");
-        double extreme = vegetables >= SalienceConfig.THIRD && ColdSweatCompat.isExtreme(player) ? .5 * vegetables * amplification : 0.0;
-        updateAttribute(player, "minecraft:generic.movement_speed", GARDEN_EXTREME_MOVE,
-                extreme, AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_garden_extreme");
     }
 
     private static void applyRenewal(ServerPlayer player, MetabolicState state, NutritionSnapshot nutrition) {
@@ -450,7 +389,8 @@ public final class SalienceEvents {
                 }
             }
         }
-        int extraTicks = dairy >= SalienceConfig.THIRD ? (int) Math.ceil(2 * MetabolicMath.amplification(state.sugar)) : 0;
+        // Fractional carry makes even 1% Cream work without rounding up to a full tick.
+        int extraTicks = state.renewalExtraTicks(dairy);
         if (extraTicks == 0) return;
         for (MobEffectInstance effect : player.getActiveEffects()) {
             if (effect.getEffect().getCategory() != MobEffectCategory.HARMFUL || effect.isInfiniteDuration()) continue;
@@ -471,7 +411,7 @@ public final class SalienceEvents {
 
     private static void finishMealFeedback(ServerPlayer player, MetabolicState state, ConsumptionStart start) {
         NutritionSnapshot current = DietBridge.snapshot(player);
-        if (start.edible() && current.dairy() >= SalienceConfig.FIRST && state.mealRecoveryCooldown == 0) {
+        if (start.edible() && current.dairy() >= SalienceConfig.SECOND && state.mealRecoveryCooldown == 0) {
             player.heal((float) (2.0 * MetabolicMath.amplification(state.sugar)));
             state.mealRecoveryCooldown = (int) (30 * 20 / MetabolicMath.amplification(state.sugar));
             activation(player, AspectIdentity.RENEWAL, "Meal recovery");

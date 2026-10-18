@@ -10,11 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class MilkEffectGuardContractTest {
     @Test
-    void milkCancelsTypedBeneficialRemovalWithoutReaddingEffects() throws Exception {
+    void nutritionLeavesBeneficialMilkPreservationToRpg() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/runtime/SalienceEvents.java"));
-        assertTrue(source.contains("MobEffectEvent.Remove"));
-        assertTrue(source.contains("event.setCanceled(true)"));
-        assertTrue(source.contains("LivingEntityUseItemEvent.Stop"));
+        assertFalse(source.contains("preserveMilkEffects("));
+        assertFalse(source.contains("MILK_EFFECT_GUARD"));
         assertFalse(source.contains("player.addEffect(exact)"));
+        assertTrue(source.contains("DietBridge.awardMilk(player)"));
     }
 }

@@ -17,7 +17,7 @@ public final class MetabolicMath {
     }
 
     public static double alcoholReduction(double alcohol, double sugar) {
-        return Math.min(0.40, 0.40 * clamp01(alcohol) * amplification(sugar));
+        return Math.min(0.30, 0.30 * clamp01(alcohol) * amplification(sugar));
     }
 
     public static double alcoholImpairment(double alcohol, double sugar) {

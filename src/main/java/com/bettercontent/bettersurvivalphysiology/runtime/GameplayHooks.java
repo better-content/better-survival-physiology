@@ -1,6 +1,7 @@
 package com.bettercontent.bettersurvivalphysiology.runtime;
 
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicMath;
+import com.bettercontent.bettersurvivalphysiology.metabolism.NutritionEffects;
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicState;
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicStateStore;
 import com.bettercontent.bettersurvivalphysiology.nutrition.DietBridge;
@@ -11,22 +12,22 @@ public final class GameplayHooks {
     private GameplayHooks() {}
 
     public static float hungerMultiplier(ServerPlayer player) {
-        return costMultiplier(player, 0.20);
+        return costMultiplier(player);
     }
 
     public static float thirstMultiplier(ServerPlayer player) {
-        return costMultiplier(player, 0.40);
+        return costMultiplier(player);
     }
 
     public static float staminaMultiplier(ServerPlayer player) {
-        return costMultiplier(player, 0.60);
+        return costMultiplier(player);
     }
 
-    private static float costMultiplier(ServerPlayer player, double threshold) {
+    private static float costMultiplier(ServerPlayer player) {
         MetabolicState state = MetabolicStateStore.get(player);
         NutritionSnapshot nutrition = DietBridge.snapshot(player);
         double fats = nutrition.actual(NutritionSnapshot.Group.FATS);
-        double savings = fats >= threshold ? Math.min(0.85, 0.40 * fats * MetabolicMath.amplification(state.sugar)) : 0.0;
+        double savings = NutritionEffects.resourceSavings(fats, state.sugar);
         double ordinary = state.enduranceReserveTicks > 0 ? 0.0 : 1.0 - savings;
         // Nectar is a separate surcharge: Tallow and its emergency reserve cannot erase it.
         return (float) (ordinary + MetabolicMath.sugarDrain(state.sugar) - 1.0

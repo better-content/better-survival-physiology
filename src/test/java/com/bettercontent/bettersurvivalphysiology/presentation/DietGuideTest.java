@@ -9,14 +9,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class DietGuideTest {
     @Test
-    void nutritionGuideUsesFourProgressionMilestones() {
-        var guide = DietBenefits.guide(AspectIdentity.IMPACT, state(.69f, 0, 0, 0, 0, .40f, .70f, .95f));
-        assertEquals("20%", guide.get(0).threshold());
+    void nutritionGuideShowsContinuousPrimaryAndOnlyRealPerks() {
+        var snapshot = state(.69f, 0, 0, 0, 0, .40f, .70f, .95f);
+        var guide = DietBenefits.guide(AspectIdentity.IMPACT, snapshot);
+        assertEquals("Now", guide.get(0).threshold());
+        assertTrue(guide.get(0).effect().contains("27.6%"));
         assertEquals("40%", guide.get(1).threshold());
-        assertEquals("60%", guide.get(2).threshold());
-        assertEquals("80%", guide.get(3).threshold());
-        assertTrue(guide.get(2).current());
-        assertFalse(guide.get(3).current());
+        assertEquals("80%", guide.get(2).threshold());
+        assertTrue(guide.get(1).current());
+        assertFalse(guide.get(2).current());
+        assertEquals(1, DietBenefits.guide(AspectIdentity.ROBUSTNESS, snapshot).stream()
+                .filter(tier -> tier.value() >= 0).count());
+        assertEquals(3, DietBenefits.guide(AspectIdentity.WORK, snapshot).stream()
+                .filter(tier -> tier.value() >= 0).count());
+    }
+
+    @Test
+    void timersUseRealGroupPerksRatherThanAUniversalTierLadder() {
+        assertEquals(.40, DietBenefits.activePerkFloor(AspectIdentity.IMPACT, .69), 1e-9);
+        assertEquals(.60, DietBenefits.activePerkFloor(AspectIdentity.WORK, .69), 1e-9);
+        assertEquals(0, DietBenefits.activePerkFloor(AspectIdentity.ROBUSTNESS, .69), 1e-9);
+        assertEquals(.20, DietBenefits.activePerkFloor(AspectIdentity.MOBILITY, .30), 1e-9);
+        assertEquals(0, DietBenefits.activePerkFloor(AspectIdentity.RENEWAL, .30), 1e-9);
     }
 
     @Test

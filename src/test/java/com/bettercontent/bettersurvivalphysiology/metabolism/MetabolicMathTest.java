@@ -34,8 +34,11 @@ class MetabolicMathTest {
 
     @Test
     void alcoholProtectionIsLinearAndImpairmentRises() {
-        assertEquals(.2, MetabolicMath.alcoholReduction(.5, 0), 1.0e-9);
-        assertEquals(.4, MetabolicMath.alcoholReduction(1, 1), 1.0e-9);
+        assertEquals(.15, MetabolicMath.alcoholReduction(.5, 0), 1.0e-9);
+        assertEquals(.30, MetabolicMath.alcoholReduction(1, 1), 1.0e-9);
+        assertEquals(.30, MetabolicMath.alcoholReduction(.5, 1), 1.0e-9);
+        assertEquals(2 * MetabolicMath.alcoholImpairment(.5, 0),
+                MetabolicMath.alcoholImpairment(.5, 1), 1.0e-9);
         assertEquals(1.0, MetabolicMath.alcoholImpairment(1.0, 0), 1.0e-9);
         assertTrue(MetabolicMath.alcoholImpairment(0.9, 0) > MetabolicMath.alcoholImpairment(0.5, 0));
     }
