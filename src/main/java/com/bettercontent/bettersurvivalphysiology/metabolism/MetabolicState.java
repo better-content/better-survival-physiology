@@ -33,6 +33,8 @@ public final class MetabolicState {
     public long lastAttackTick = -100L;
     public transient java.util.UUID heavyBlowTarget;
     public transient long heavyBlowAttackTick = -1L;
+    public transient final com.bettercontent.bettersurvivalphysiology.runtime.HeavyBlow.Feedback heavyBlowFeedback =
+            new com.bettercontent.bettersurvivalphysiology.runtime.HeavyBlow.Feedback();
     public transient int lastPresentationFlags = -1;
     public transient byte[] lastNutritionTiers = {-1, -1, -1, -1, -1, -1};
 

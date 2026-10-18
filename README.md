@@ -31,6 +31,14 @@ including values below ability thresholds. Zero values are omitted; positive tra
 narrow windows and is hidden while a screen is open or the HUD is hidden. There is no separate
 text meal recap.
 
+Heavy Blow readiness uses one short Impact sound and radial particle burst at the player on
+entering the ready state; the existing discharge cue stays at the struck target. Combat and
+feedback share the same protein threshold, 12-second base cooldown, four-second attack quiet
+period and 90% native attack-charge check. Blackout cannot show ready. Initial login/reconnect
+charge-up establishes a silent baseline, not a ready notification. Epic Fight's native hits
+still pass through the shared attack handler, so its stun and ordinary knockback do not add
+separate cues. This adds no permanent readiness HUD or combat balance changes.
+
 The eight identities use short physical-foley gestures with a quiet one-second room decay.
 Nutrition, RPG allocation, and Matter use related contextual renders rather than identical
 files. Sugar crash deliberately receives a broken Tempo gesture. The reproducible renderer,

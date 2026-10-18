@@ -3,6 +3,7 @@ package com.bettercontent.bettersurvivalphysiology.presentation;
 import com.bettercontent.bettersurvivalphysiology.config.SalienceConfig;
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicState;
 import com.bettercontent.bettersurvivalphysiology.nutrition.NutritionSnapshot;
+import com.bettercontent.bettersurvivalphysiology.runtime.HeavyBlow;
 import net.minecraft.server.level.ServerPlayer;
 
 public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSeconds,
@@ -13,9 +14,9 @@ public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSe
         double prepared = SalienceConfig.SECOND;
         double feast = SalienceConfig.FOURTH;
         int flags = 0;
-        if (nutrition.proteins() >= prepared && state.heavyBlowCooldown == 0
-                && player.level().getGameTime() - state.lastAttackTick >= 80L
-                && player.getAttackStrengthScale(0.5f) >= 0.90f) flags |= PresentationFlags.IMPACT_READY;
+        if (HeavyBlow.ready(nutrition.proteins(), prepared, state.heavyBlowCooldown,
+                player.level().getGameTime(), state.lastAttackTick,
+                player.getAttackStrengthScale(0.5f), state.blackout)) flags |= PresentationFlags.IMPACT_READY;
         if (nutrition.fruits() >= SalienceConfig.THIRD && state.sprintTicks >= 60) flags |= PresentationFlags.MOBILITY_STRIDE;
         if (nutrition.fats() >= feast && state.enduranceReserveCooldown == 0) flags |= PresentationFlags.ENDURANCE_READY;
         if (state.enduranceReserveTicks > 0) flags |= PresentationFlags.ENDURANCE_ACTIVE;

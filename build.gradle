@@ -49,7 +49,11 @@ repositories {
     maven { url = 'https://maven.parchmentmc.org' }
 }
 
+// Raw pinned native bytecode is a declared test input, never a retained audit dump.
+configurations { nativeEpicFight }
+
 dependencies {
+    nativeEpicFight('curse.maven:epic-fight-mod-405076:8049910') { transitive = false }
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
@@ -81,6 +85,10 @@ tasks.withType(JavaCompile).configureEach {
 
 test {
     useJUnitPlatform()
+    inputs.files(configurations.nativeEpicFight)
+    doFirst {
+        systemProperty 'salience.nativeEpicFight', configurations.nativeEpicFight.singleFile.absolutePath
+    }
 }
 
 tasks.register('verifyFast') {

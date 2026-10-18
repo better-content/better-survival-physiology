@@ -294,8 +294,8 @@ public final class SalienceEvents {
         double proteins = DietBridge.snapshot(player).actual(NutritionSnapshot.Group.PROTEINS);
         double force = proteins >= SalienceConfig.FIRST ? .15 * MetabolicMath.amplification(state.sugar) : 0.0;
         long now = player.level().getGameTime();
-        boolean heavy = proteins >= SalienceConfig.SECOND && state.heavyBlowCooldown == 0
-                && now - state.lastAttackTick >= 80L && player.getAttackStrengthScale(0.5f) >= 0.90f;
+        boolean heavy = HeavyBlow.ready(proteins, SalienceConfig.SECOND, state.heavyBlowCooldown,
+                now, state.lastAttackTick, player.getAttackStrengthScale(0.5f), state.blackout);
         var motionBefore = target.getDeltaMovement();
         boolean impactApplied = false;
         if (heavy) {
@@ -313,6 +313,7 @@ public final class SalienceEvents {
         if (heavy && (impactApplied || !motionBefore.equals(target.getDeltaMovement())))
             metabolicDiscovery(player, com.bettercontent.bettersurvivalphysiology.api.event.MetabolicDiscoveryEvent.Kind.HEAVY_BLOW, target.getName().getString());
         state.lastAttackTick = now;
+        state.heavyBlowFeedback.attacked();
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -503,6 +504,12 @@ public final class SalienceEvents {
     }
 
     private static boolean updatePresentationFeedback(ServerPlayer player, MetabolicState state, int flags) {
+        // Independent of the other presentation flags: login's native attack recharge must
+        // settle silently, and an attack between ticks must still re-arm the next ready cue.
+        if (state.heavyBlowFeedback.update(PresentationFlags.has(flags, PresentationFlags.IMPACT_READY),
+                player.getAttackStrengthScale(0.5f))) {
+            activation(player, AspectIdentity.IMPACT, "Heavy Blow ready");
+        }
         int previous = state.lastPresentationFlags;
         state.lastPresentationFlags = flags;
         if (previous < 0) return true;
