@@ -409,6 +409,20 @@ public final class SalienceEvents {
         }
     }
 
+    /** Fractional gains get threshold feedback immediately; only a completed edible serving is a meal. */
+    public static void beverageFeedback(ServerPlayer player, NutritionSnapshot before,
+                                        double sugarBefore, double alcoholBefore,
+                                        boolean edible, boolean completed) {
+        MetabolicState state = MetabolicStateStore.get(player);
+        if (edible && !completed && DietBridge.tracker(player).isPresent()) {
+            NutritionThreadBoundary.onMealSettled(player, before, DietBridge.snapshot(player), ordinary());
+        }
+        finishMealFeedback(player, state,
+                new ConsumptionStart(before, sugarBefore, alcoholBefore, edible && completed));
+        // Tiny fractions must still reach the client, even below the feedback epsilon.
+        SalienceNetwork.sync(player, DietBridge.snapshot(player), state);
+    }
+
     private static void finishMealFeedback(ServerPlayer player, MetabolicState state, ConsumptionStart start) {
         NutritionSnapshot current = DietBridge.snapshot(player);
         if (start.edible() && current.dairy() >= SalienceConfig.SECOND && state.mealRecoveryCooldown == 0) {

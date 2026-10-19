@@ -24,6 +24,27 @@ java {
     }
 }
 
+// Native bridge tests are nonshipping and run with the actual beverage provider and Diet.
+sourceSets {
+    nativeFixture {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+
+def nativeRunDirectory = layout.buildDirectory.dir("gametest/${UUID.randomUUID()}").get().asFile
+
+tasks.named('processNativeFixtureResources', ProcessResources) {
+    // Same authored Create-6 Respite repairs as the provider's native fixture, never production resources.
+    ['recipes/filling/water_cup.json', 'recipes/pouring/water_cup.json',
+     'recipes/emptying/water_cup.json', 'loot_tables/blocks/kettle.json',
+     'advancements/main/stunt_tea_bush.json'].each { relative ->
+        from("../../better-content-modpack/kubejs/data/farmersrespite/${relative}") {
+            into "data/farmersrespite/${relative.substring(0, relative.lastIndexOf('/'))}"
+        }
+    }
+}
+
 minecraft {
     mappings channel: 'parchment', version: parchment_mappings
     copyIdeResources = true
@@ -40,10 +61,42 @@ minecraft {
             args '--nogui'
             mods { "${mod_id}" { source sourceSets.main } }
         }
+        gameTestServer {
+            workingDirectory nativeRunDirectory
+            property 'forge.logging.console.level', 'info'
+            property 'forge.enableGameTest', 'true'
+            property 'forge.gameTestServer', 'true'
+            property 'forge.enabledGameTestNamespaces', mod_id
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            args '--nogui'
+            mods { "${mod_id}" { source sourceSets.main; source sourceSets.nativeFixture } }
+        }
     }
 }
 
+// File dependencies bypass FG remapping. Publish an immutable, content-addressed flatDir artifact.
+def beverageInput = file(providers.gradleProperty('drinkingWaterRuntimeJar').getOrElse(
+        '../better-drinking-water/build/libs/better-drinking-water-1.1.0.jar'))
+if (!beverageInput.isFile()) throw new GradleException("Stage the beverage provider first: ${beverageInput}")
+def beverageBytes = beverageInput.bytes
+def beverageHash = java.security.MessageDigest.getInstance('SHA-256').digest(beverageBytes).encodeHex().toString()
+// Outside buildDir: canonical `clean verifyFull` must not remove the already-resolved provider.
+def beverageDirectory = file(".gradle/beverage-provider/${beverageHash}")
+def beverageSnapshot = new File(beverageDirectory, "better-drinking-water-${beverageHash}.jar")
+if (!beverageSnapshot.isFile()) {
+    beverageDirectory.mkdirs()
+    java.nio.file.Files.write(beverageSnapshot.toPath(), beverageBytes)
+} else if (!java.util.Arrays.equals(beverageSnapshot.bytes, beverageBytes)) {
+    throw new GradleException("Corrupted immutable beverage snapshot: ${beverageSnapshot}")
+}
+def beverageDependency = "bettercontent.beverage.local:better-drinking-water:${beverageHash}"
+
 repositories {
+    flatDir { dirs beverageDirectory; content { includeGroup('bettercontent.beverage.local') } }
+    maven { url = 'https://maven.createmod.net' }
+    maven { url = 'https://maven.ithundxr.dev/mirror' }
+    maven { url = 'https://maven.tterrag.com/' }
     mavenCentral()
     maven { url = 'https://cursemaven.com' }
     maven { url = 'https://maven.parchmentmc.org' }
@@ -58,6 +111,23 @@ dependencies {
     nativeColdSweat('curse.maven:cold-sweat-506194:7893262') { transitive = false }
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    compileOnly fg.deobf(beverageDependency)
+    runtimeOnly fg.deobf(beverageDependency)
+
+    // Exact core native-provider fixture dependencies; no unrelated optional integrations.
+    nativeFixtureCompileOnly fg.deobf('curse.maven:curios-api-309927:6418456')
+    nativeFixtureRuntimeOnly fg.deobf('curse.maven:diet-443570:4813904')
+    nativeFixtureRuntimeOnly fg.deobf('com.simibubi.create:create-1.20.1:6.0.8-291:slim')
+    nativeFixtureRuntimeOnly fg.deobf('net.createmod.ponder:Ponder-Forge-1.20.1:1.0.92')
+    nativeFixtureRuntimeOnly fg.deobf('dev.engine-room.flywheel:flywheel-forge-1.20.1:1.0.5')
+    nativeFixtureRuntimeOnly fg.deobf('com.tterrag.registrate:Registrate:MC1.20-1.3.3')
+    nativeFixtureRuntimeOnly fg.deobf('curse.maven:thirst-was-taken-679270:6660408')
+    nativeFixtureRuntimeOnly fg.deobf('curse.maven:curios-api-309927:6418456')
+    nativeFixtureRuntimeOnly fg.deobf('curse.maven:architectury-api-419699:5137938')
+    nativeFixtureRuntimeOnly fg.deobf('curse.maven:farmers-delight-398521:8007609')
+    nativeFixtureRuntimeOnly fg.deobf('curse.maven:farmers-respite-551453:5543547')
+    nativeFixtureRuntimeOnly fg.deobf('curse.maven:brewin-and-chewin-637808:6237884')
 
     compileOnly fg.deobf('curse.maven:diet-443570:4813904')
     compileOnly fg.deobf('curse.maven:brewin-and-chewin-637808:6237884')
@@ -104,7 +174,31 @@ tasks.register('verifyFast') {
 tasks.register('verifyFull') {
     group = 'verification'
     description = 'Builds the runtime artifact after the deterministic checks.'
-    dependsOn tasks.named('verifyFast'), tasks.named('stageRuntimeJar')
+    dependsOn tasks.named('verifyFast'), tasks.named('stageRuntimeJar'), tasks.named('verifyNativeBeverages')
+}
+
+tasks.register('prepareNativeBeverages', Copy) {
+    from('src/nativeFixture/resources/gameteststructures') { into 'gameteststructures' }
+    from 'src/nativeFixture/server.properties'
+    into nativeRunDirectory
+}
+tasks.matching { it.name.startsWith('prepareRunGameTestServer') }.configureEach {
+    dependsOn tasks.named('prepareNativeBeverages'), tasks.named('nativeFixtureClasses')
+}
+tasks.register('verifyNativeBeverages') {
+    group = 'verification'
+    description = 'Runs the nonshipping Forge beverage/Diet/metabolism integration fixture.'
+    dependsOn tasks.named('runGameTestServer')
+    doLast {
+        def log = new File(nativeRunDirectory, 'logs/latest.log')
+        if (!log.isFile()) throw new GradleException("Missing native diagnostics: ${log}")
+        if (!log.text.contains('All 5 required tests passed') || !log.text.contains('5 GAME TESTS COMPLETE'))
+            throw new GradleException("Missing five-test native completion: ${log}")
+        def failures = log.readLines().findAll { line ->
+            ['/ERROR]', '/FATAL]', '[ERROR]', '[FATAL]', 'Mixin apply failed'].any { line.contains(it) }
+        }
+        if (!failures.isEmpty()) throw new GradleException("Native diagnostics failed: ${failures.take(8)}")
+    }
 }
 
 tasks.named('jar', Jar).configure {

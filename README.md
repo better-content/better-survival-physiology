@@ -90,6 +90,30 @@ use the actual consumption loads, and milk shows its direct Cream/Tallow award. 
 Diet's vertical default-name list, blank separator and “When eaten” heading; it does not add
 ASCII aspect glyphs or nutrient-effect prose. Diet's native screen remains unchanged.
 
+## Fractional beverages
+
+When Better Drinking Water 1.1.0 or newer is installed, its server-only typed beverage events
+bridge paid fractions into Diet and the existing Nectar/Draught state. `Profile` captures native
+`DietApi` whole-serving gains once, before payment, together with the existing sugar and alcohol
+profiles. The bounded payload uses `diet` (only the six ordinary group IDs), `sugar`, `alcohol`,
+`edible`, and the source `item` ID. Milk buckets replace ordinary lookup with exactly 0.06 dairy
+and 0.06 fats per serving; milk bottles retain normal Diet lookup.
+
+Each `Sip` awards only `to - from`, requiring finite ordered endpoints in `0–1`. Profile gains
+are finite, nonnegative and capped at one; negative/nonfinite gains award nothing. Nectar does
+not amplify these gains. Diet remains the owner of ordinary values, saves and sync; physiology
+remains the owner of metabolic loads. Blackout cancels both purchase and already-paid release.
+The beverage engine owns hunger, saturation and authored effects (including Fruits Delight
+normalization). This bridge never calls native item completion, Diet whole-item consumption,
+or a synthetic Forge finish event, so those mechanics cannot award a second full serving.
+
+Nutrition threshold cues and episode recovery follow the actual fractional gain. An edible
+serving can trigger Cream meal recovery only upon completion, not on every sip; native Diet
+food discovery is recorded at completion. Fractional state is saved and synced immediately.
+The engine owns fraction sequencing/replay prevention; these hooks additionally reject invalid
+endpoints and defensively refuse release during blackout. Without Better Drinking Water, the
+integration class is not registered and ordinary native item consumption remains unchanged.
+
 It is not a global aspect registry and the other Better Content mods do not depend on it.
 
 ## Build
@@ -97,3 +121,21 @@ It is not a global aspect registry and the other Better Content mods do not depe
 ```sh
 ./gradlew verifyFull
 ```
+
+Stage Better Drinking Water first, in dependency order. The compile/runtime integration uses
+`../better-drinking-water/build/libs/better-drinking-water-1.1.0.jar`; pass
+`-PdrinkingWaterRuntimeJar=/absolute/path/to/provider.jar` for an isolated provider snapshot.
+The build copies exact bytes into a SHA-256-versioned local flat-directory artifact under
+`.gradle/beverage-provider/`, outside the cleanable `build/` tree, so ForgeGradle actually remaps it
+(file-collection dependencies bypass remapping). The provider is an optional
+installed mod, not bundled into this artifact.
+
+`verifyFast` covers fraction conservation, hostile bounds and the pinned native Diet boundary.
+`verifyNativeBeverages` runs five nonshipping Forge GameTests with real Diet, the complete beverage
+provider and its core native dependencies: milk bucket fractional awards without Nectar amplification,
+milk bottle native lookup, honey/beer metabolic doses and persistence, completion-only meal recovery,
+and blackout/malformed-fraction rejection. `verifyFull` includes both plus runtime staging. Every native
+run uses a fresh retained directory beneath `build/gametest/`; its fixtures are excluded from the
+production JAR. Native runtime diagnostics reject failed-operation/ERROR/FATAL records. The fixture
+mirrors the provider's authored pack-side Respite/Create recipe repairs, without changing production
+resources. Source fixture success is not full-pack runtime acceptance.
