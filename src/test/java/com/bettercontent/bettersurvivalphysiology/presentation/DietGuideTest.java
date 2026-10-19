@@ -40,13 +40,35 @@ final class DietGuideTest {
         assertEquals("80%", sugar.get(3).threshold());
         assertTrue(sugar.get(0).current());
         assertFalse(sugar.get(1).current());
-        assertTrue(sugar.get(1).effect().contains("Hunger"));
+        assertTrue(sugar.get(1).effect().contains("hunger/nutrient drain"));
+        assertTrue(sugar.get(1).effect().contains("Draught penalties"));
 
         var alcohol = DietBenefits.guide(AspectIdentity.CONTROL, state(0, 0, 0, .70f, 0, .5f, .75f, .9f));
         assertTrue(alcohol.get(0).current());
         assertTrue(alcohol.get(1).current());
         assertTrue(alcohol.get(2).current());
         assertFalse(alcohol.get(3).current());
+    }
+
+    @Test
+    void journalDescriptionsStayShortAndKeepCriticalQualifiers() {
+        for (float level : new float[]{0, .4f, .8f, 1f, 1.25f}) {
+            var snapshot = state(level, level, 0, level, level, .5f, .75f, .9f);
+            for (var aspect : AspectIdentity.values()) {
+                String current = DietBenefits.current(aspect, snapshot);
+                assertTrue(current.length() <= 100, aspect + ": " + current);
+                for (var row : DietBenefits.guide(aspect, snapshot)) {
+                    assertTrue(row.effect().length() <= 100, aspect + ": " + row.effect());
+                }
+            }
+        }
+        var snapshot = state(.8f, 0, 0, .8f, .8f, .5f, .75f, .9f);
+        assertTrue(DietBenefits.current(AspectIdentity.WORK, snapshot).contains("Right-tool"));
+        assertTrue(DietBenefits.current(AspectIdentity.ENDURANCE, snapshot).contains("loads extra"));
+        assertTrue(DietBenefits.current(AspectIdentity.CONTROL, snapshot).contains("Damage taken"));
+        assertTrue(DietBenefits.guide(AspectIdentity.IMPACT, snapshot).get(1).effect().contains("Cooldown 12s"));
+        assertTrue(DietBenefits.guide(AspectIdentity.ENDURANCE, snapshot).get(1).effect().contains("Loads still cost extra"));
+        assertTrue(DietBenefits.guide(AspectIdentity.RENEWAL, snapshot).get(2).effect().contains("timed harmful effect"));
     }
 
     private static MetabolicSyncPacket state(float proteins, float sugar, float debt, float alcohol,

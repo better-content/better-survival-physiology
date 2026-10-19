@@ -29,16 +29,16 @@ public final class DietBenefits {
         double n = value(state, aspect), nectar = state.sugar();
         return switch (aspect) {
             case IMPACT -> String.format("Melee damage +%.1f%%", 100 * NutritionEffects.meleeDamage(n, nectar));
-            case WORK -> String.format("Correct-tool mining speed +%.1f%%", 100 * NutritionEffects.miningSpeed(n, nectar));
-            case MOBILITY -> String.format("Movement and swimming +%.1f%%", 100 * NutritionEffects.movementSpeed(n, nectar));
-            case ENDURANCE -> String.format("Hunger, thirst and stamina costs -%.1f%% before load surcharges", 100 * NutritionEffects.resourceSavings(n, nectar));
+            case WORK -> String.format("Right-tool mining +%.1f%%", 100 * NutritionEffects.miningSpeed(n, nectar));
+            case MOBILITY -> String.format("Move/swim speed +%.1f%%", 100 * NutritionEffects.movementSpeed(n, nectar));
+            case ENDURANCE -> String.format("Hunger/thirst/stamina costs -%.1f%%; loads extra", 100 * NutritionEffects.resourceSavings(n, nectar));
             case ROBUSTNESS -> String.format("Heat/cold drift -%.1f%%", 100 * NutritionEffects.temperatureResistance(n, nectar));
-            case RENEWAL -> String.format("Harmful-effect expiry ×%.2f", 1 + NutritionEffects.harmfulExpiryBonus(n, nectar));
-            case TEMPO -> String.format("Nutrient benefits and Draught protection/impairment ×%.2f; hunger + nutrition drain ×%.2f; protective caps apply",
+            case RENEWAL -> String.format("Harmful effects fade ×%.2f faster", 1 + NutritionEffects.harmfulExpiryBonus(n, nectar));
+            case TEMPO -> String.format("Benefits & Draught penalties ×%.2f; hunger/nutrient drain ×%.2f",
                     MetabolicMath.amplification(n), MetabolicMath.sugarDrain(n));
             case CONTROL -> PresentationFlags.has(state.flags(), PresentationFlags.CONTROL_BLACKOUT)
-                    ? "Blackout: no movement or actions until Draught falls below 85%"
-                    : String.format("Damage -%.0f%%; move -%.0f%%; attack/use -%.0f%%; resource costs +%.0f%%",
+                    ? "Blackout: no actions or movement. Clears below 85%."
+                    : String.format("Damage taken -%.0f%%; move -%.0f%%; attack/use -%.0f%%; costs +%.0f%%",
                     100 * MetabolicMath.alcoholReduction(n, nectar),
                     75 * MetabolicMath.alcoholImpairment(n, nectar),
                     90 * MetabolicMath.alcoholImpairment(n, nectar),
@@ -68,31 +68,31 @@ public final class DietBenefits {
                 continuousGuide(aspect, .20f, state), continuousGuide(aspect, .40f, state),
                 continuousGuide(aspect, .60f, state), continuousGuide(aspect, .80f, state));
         List<GuideTier> result = new ArrayList<>();
-        result.add(new GuideTier("Now", -1, current(aspect, state) + "; scales continuously from zero", true));
+        result.add(new GuideTier("Now", -1, current(aspect, state), true));
         switch (aspect) {
             case IMPACT -> {
-                perk(result, state, aspect, .40f, "After 4s without attacking: charged strike +50% damage; 12s cooldown");
-                perk(result, state, aspect, .80f, "Charged strike splashes 35% damage to up to two nearby foes");
+                perk(result, state, aspect, .40f, "No attacks for 4s: charged hit +50% damage. Cooldown 12s.");
+                perk(result, state, aspect, .80f, "Charged hit: 35% splash to up to 2 nearby foes.");
             }
             case WORK -> {
-                perk(result, state, aspect, .40f, "Valid correct-tool breaks add +10% mining speed each, up to five");
-                perk(result, state, aspect, .60f, "Work sequence survives a 5s pause instead of 3s");
-                perk(result, state, aspect, .80f, "Five valid breaks grant +100% mining speed for 5s");
+                perk(result, state, aspect, .40f, "Right-tool breaks: +10% mining speed each, up to +50%.");
+                perk(result, state, aspect, .60f, "Mining streak lasts 5s between breaks (was 3s).");
+                perk(result, state, aspect, .80f, "5 valid breaks: +100% mining speed for 5s.");
             }
             case MOBILITY -> {
                 perk(result, state, aspect, .20f, "Fall damage -35% × Berry level");
-                perk(result, state, aspect, .40f, "After 3s sprinting: another +12% movement/swimming speed");
-                perk(result, state, aspect, .80f, "Sprinting jump launches forward; 12s cooldown");
+                perk(result, state, aspect, .40f, "Sprint 3s: +12% extra move/swim speed.");
+                perk(result, state, aspect, .80f, "Sprint-jump: forward leap. Cooldown 12s.");
             }
-            case ENDURANCE -> perk(result, state, aspect, .80f, "Low food, thirst or stamina triggers 10s reserve; 2m cooldown; load surcharges remain");
-            case ROBUSTNESS -> perk(result, state, aspect, .80f, "Block one temperature hit and pull temperature safe; 30s cooldown");
+            case ENDURANCE -> perk(result, state, aspect, .80f, "Low food/thirst/stamina: 10s reserve. Cooldown 2m. Loads still cost extra.");
+            case ROBUSTNESS -> perk(result, state, aspect, .80f, "Block 1 heat/cold hit; reset temperature to safe. Cooldown 30s.");
             case RENEWAL -> {
-                perk(result, state, aspect, .40f, "Eating heals one heart; 30s cooldown");
-                perk(result, state, aspect, .80f, "Remove one finite harmful effect; 20s cooldown");
+                perk(result, state, aspect, .40f, "Eat: heal 1 heart. Cooldown 30s.");
+                perk(result, state, aspect, .80f, "Clear 1 timed harmful effect. Cooldown 20s.");
             }
             default -> throw new IllegalArgumentException("Not an ordinary nutrient");
         }
-        result.add(new GuideTier("Nectar", -1, "Nectar scales potency/timing, not unlock thresholds; resource and temperature reductions cap at 85%", true));
+        result.add(new GuideTier("Nectar", -1, "Nectar boosts strength/timing, not unlocks. Cost/temperature savings cap at 85%.", true));
         return List.copyOf(result);
     }
 
@@ -114,11 +114,11 @@ public final class DietBenefits {
     private static GuideTier continuousGuide(AspectIdentity aspect, float sample, MetabolicSyncPacket state) {
         String text;
         if (aspect == AspectIdentity.TEMPO) {
-            text = String.format("Benefits AND Draught penalties ×%.2f; Hunger + nutrition drain ×%.2f; caps apply",
+            text = String.format("Benefits & Draught penalties ×%.2f; hunger/nutrient drain ×%.2f",
                     MetabolicMath.amplification(sample), MetabolicMath.sugarDrain(sample));
         } else {
             double impairment = MetabolicMath.alcoholImpairment(sample, state.sugar());
-            text = String.format("Damage -%.0f%%; move -%.0f%%; attack/use -%.0f%%; costs +%.0f%%",
+            text = String.format("Damage taken -%.0f%%; move -%.0f%%; attack/use -%.0f%%; costs +%.0f%%",
                     100 * MetabolicMath.alcoholReduction(sample, state.sugar()),
                     75 * impairment, 90 * impairment, 200 * impairment);
         }

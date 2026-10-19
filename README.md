@@ -64,7 +64,9 @@ positive current nutrient, Nectar and Draught value with its aspect badge and pe
 including values below ability thresholds. Zero values are omitted; positive traces display
 `<1%` rather than rounding to zero, and metabolic loads can exceed 100%. The strip wraps on
 narrow windows and is hidden while a screen is open or the HUD is hidden. There is no separate
-text meal recap.
+text meal recap. Shared Journal nutrient hover copy stays compact: direct effect labels and short
+perk lines retain values, triggers, cooldowns and drawbacks without repeating continuous-scaling prose.
+This is copy-only; Journal layout, unlock thresholds and gameplay calculations are unchanged.
 
 Heavy Blow readiness uses one short Impact sound and radial particle burst at the player on
 entering the ready state; the existing discharge cue stays at the struck target. Combat and
