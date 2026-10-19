@@ -27,6 +27,10 @@ Diet value clamped to `0–1`, and `a = 1 + Nectar load` (load clamped to `0–1
 | Root / Robustness | Temperature drift reduced by `min(85%, 70% × n × a)` | 80%: cancel one temperature hit and pull temperature safe, 30s base cooldown |
 | Cream / Renewal | Harmful-effect expiry `1 + n × a` times normal speed | 40%: edible meal heals one heart, 30s base cooldown; 80%: cleanse one finite harmful effect, 20s base cooldown |
 
+Cold Sweat 2.4 exposes body temperature as the read-only sum `BODY = CORE + BASE`.
+Root's drift correction and temperature-hit guard read `BODY`, then write the desired
+body value through `CORE = desiredBody - BASE`, preserving the native base contribution.
+
 Nectar multiplies nutrient potency, supported perk durations and inverse cooldowns; it does
 not move unlock thresholds or amplify RPG allocations. Full Nectar doubles ordinary primary
 potency, subject to the reduction caps. Cream's fractional expiry is accumulated, not rounded

@@ -21,15 +21,22 @@ public final class ColdSweatCompat {
         boolean movingAway = Math.signum(current) == Math.signum(previous) && Math.abs(current) > Math.abs(previous);
         if (!movingAway) return;
         double corrected = previous + (current - previous) * Math.max(0.0, 1.0 - resistance);
-        Temperature.set(player, Temperature.Trait.BODY, corrected);
+        setBody(player, corrected);
         LAST_BODY.put(player.getUUID(), corrected);
     }
 
     public static void pullSafe(ServerPlayer player) {
         if (!ModList.get().isLoaded("cold_sweat")) return;
         double body = Temperature.get(player, Temperature.Trait.BODY);
-        Temperature.set(player, Temperature.Trait.BODY, Math.copySign(Math.min(Math.abs(body), 0.25), body));
+        setBody(player, Math.copySign(Math.min(Math.abs(body), 0.25), body));
         LAST_BODY.put(player.getUUID(), Temperature.get(player, Temperature.Trait.BODY));
+    }
+
+    private static void setBody(ServerPlayer player, double body) {
+        // BODY is read-only in Cold Sweat 2.4: BODY = CORE + BASE.
+        // Adjust CORE without overwriting equipment/modifier contributions to BASE.
+        double base = Temperature.get(player, Temperature.Trait.BASE);
+        Temperature.set(player, Temperature.Trait.CORE, body - base);
     }
 
     public static boolean isExtreme(ServerPlayer player) {

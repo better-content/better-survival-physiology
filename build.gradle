@@ -50,11 +50,12 @@ repositories {
 }
 
 // Raw pinned native bytecode is a declared test input, never a retained audit dump.
-configurations { nativeEpicFight; nativeDiet }
+configurations { nativeEpicFight; nativeDiet; nativeColdSweat }
 
 dependencies {
     nativeEpicFight('curse.maven:epic-fight-mod-405076:8049910') { transitive = false }
     nativeDiet('curse.maven:diet-443570:4813904') { transitive = false }
+    nativeColdSweat('curse.maven:cold-sweat-506194:7893262') { transitive = false }
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
@@ -86,10 +87,11 @@ tasks.withType(JavaCompile).configureEach {
 
 test {
     useJUnitPlatform()
-    inputs.files(configurations.nativeEpicFight, configurations.nativeDiet)
+    inputs.files(configurations.nativeEpicFight, configurations.nativeDiet, configurations.nativeColdSweat)
     doFirst {
         systemProperty 'salience.nativeEpicFight', configurations.nativeEpicFight.singleFile.absolutePath
         systemProperty 'salience.nativeDiet', configurations.nativeDiet.singleFile.absolutePath
+        systemProperty 'salience.nativeColdSweat', configurations.nativeColdSweat.singleFile.absolutePath
     }
 }
 
