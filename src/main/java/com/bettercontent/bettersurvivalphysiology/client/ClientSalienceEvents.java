@@ -78,6 +78,8 @@ public final class ClientSalienceEvents {
                     .append(Component.literal(" " + identity.displayName).withStyle(style -> style.withColor(identity.color)))
                     .append(Component.literal(" " + entry.percentage()).withStyle(style -> style.withColor(0xD8D5CE)));
         }
+        // The oversized badge font extends above its row; reserve a full line of clearance.
+        event.getToolTip().add(Component.empty());
         event.getToolTip().add(line);
     }
 

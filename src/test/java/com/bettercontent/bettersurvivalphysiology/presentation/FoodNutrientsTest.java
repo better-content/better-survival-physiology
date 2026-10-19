@@ -82,6 +82,10 @@ class FoodNutrientsTest {
         assertTrue(client.contains("entry.percentage()"));
         assertFalse(client.contains("Nourishes:"));
         assertTrue(client.contains("MutableComponent line = Component.empty();"));
+        String paddedRow = "event.getToolTip().add(Component.empty());\n        event.getToolTip().add(line);";
+        assertTrue(client.contains(paddedRow), "Nutrition badges need a blank line above their oversized icons");
+        assertTrue(client.indexOf("if (entries.isEmpty()) return;") < client.indexOf(paddedRow),
+                "Tooltips without nutrition entries must not gain a blank line");
         assertFalse(client.contains("identity.glyph"));
         assertFalse(client.contains("preparedPromise"));
         assertFalse(client.contains("See Diet for all effects"));
