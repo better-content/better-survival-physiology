@@ -57,6 +57,11 @@ decay curve and alcohol its linear clearance curve, but both run faster while su
 the sugar multiplier is recalculated as sugar falls. The configured sugar half-life is the
 baseline before this self-acceleration, not a guaranteed wall-clock half-life.
 
+Nectar also accelerates thirst: the shared resource-cost hook adds `8^load - 1` to the multiplier for
+incoming native thirst exhaustion, alongside the ordinary cost after Tallow savings and any Draught surcharge.
+Tallow's emergency reserve cannot cancel this extra cost. Thirst still owns quenching depletion,
+hydration depletion, environmental modifiers and synchronization; no second thirst meter is added.
+
 Opening Diet uses Diet's native screen and navigation. Better Survival Physiology no longer replaces that
 screen or adds a separate metabolism panel; its gameplay effects and contextual feedback continue
 to operate independently. A single graphical nutrition strip above the hotbar shows every
@@ -131,10 +136,11 @@ The build copies exact bytes into a SHA-256-versioned local flat-directory artif
 installed mod, not bundled into this artifact.
 
 `verifyFast` covers fraction conservation, hostile bounds and the pinned native Diet boundary.
-`verifyNativeBeverages` runs five nonshipping Forge GameTests with real Diet, the complete beverage
+`verifyNativeBeverages` runs six nonshipping Forge GameTests with real Diet, the complete beverage
 provider and its core native dependencies: milk bucket fractional awards without Nectar amplification,
 milk bottle native lookup, honey/beer metabolic doses and persistence, completion-only meal recovery,
-and blackout/malformed-fraction rejection. `verifyFull` includes both plus runtime staging. Every native
+blackout/malformed-fraction rejection, and Nectar's actual native thirst exhaustion/depletion
+(including the emergency-reserve boundary). `verifyFull` includes both plus runtime staging. Every native
 run uses a fresh retained directory beneath `build/gametest/`; its fixtures are excluded from the
 production JAR. Native runtime diagnostics reject failed-operation/ERROR/FATAL records. The fixture
 mirrors the provider's authored pack-side Respite/Create recipe repairs, without changing production

@@ -156,6 +156,49 @@ public final class PhysiologyBeverageGameTests {
         helper.succeed();
     }
 
+    @GameTest(templateNamespace = SystemicSalienceMod.MOD_ID, template = "empty")
+    public static void nectarAcceleratesNativeThirstExhaustionAndDepletion(GameTestHelper helper) {
+        var player = player(helper);
+        var state = MetabolicStateStore.get(player);
+        var thirst = player.getCapability(ModCapabilities.PLAYER_THIRST).resolve().orElseThrow();
+        float input = .1f;
+        thirst.setExhaustion(0);
+        thirst.addExhaustion(player, input);
+        float baseline = thirst.getExhaustion();
+        helper.assertTrue(baseline > 0 && Float.isFinite(baseline), "Native fixture must admit ordinary thirst exhaustion");
+        for (double nectar : new double[]{0, .25, .5, 1}) {
+            state.sugar = nectar;
+            thirst.setExhaustion(0);
+            thirst.addExhaustion(player, input);
+            near(helper, thirst.getExhaustion(), baseline * Math.pow(8, nectar),
+                    "Native thirst hook applies Nectar surcharge at load " + nectar);
+        }
+        // Tallow and its emergency reserve reduce ordinary costs, not Nectar's extra cost.
+        DietBridge.tracker(player).orElseThrow().setValue("fats", 1);
+        state.sugar = 1;
+        state.enduranceReserveTicks = 200;
+        thirst.setExhaustion(0);
+        thirst.addExhaustion(player, input);
+        near(helper, thirst.getExhaustion(), baseline * 7, "Emergency reserve cannot erase Nectar thirst surcharge");
+        DietBridge.tracker(player).orElseThrow().setValue("fats", 0);
+        state.enduranceReserveTicks = 0;
+        int pulses = (int) Math.floor(4 / (baseline * 8)) + 1;
+        helper.assertTrue(pulses > 0 && pulses < 1000, "Bounded native exhaustion-threshold workload");
+        for (double nectar : new double[]{0, 1}) {
+            state.sugar = nectar;
+            thirst.setExhaustion(0);
+            thirst.setThirst(20);
+            thirst.setQuenched(0);
+            for (int i = 0; i < pulses; i++) {
+                thirst.addExhaustion(player, input);
+                thirst.tick(player);
+            }
+            helper.assertTrue(nectar == 0 ? thirst.getThirst() == 20 : thirst.getThirst() < 20,
+                    "Identical native cost pulses must consume hydration sooner with Nectar, load=" + nectar);
+        }
+        helper.succeed();
+    }
+
     private static void source(ServerPlayer player, ItemStack stack) {
         CuriosApi.getCuriosInventory(player).resolve().orElseThrow().getStacksHandler("water").orElseThrow()
                 .getStacks().setStackInSlot(0, stack.copy());

@@ -192,8 +192,8 @@ tasks.register('verifyNativeBeverages') {
     doLast {
         def log = new File(nativeRunDirectory, 'logs/latest.log')
         if (!log.isFile()) throw new GradleException("Missing native diagnostics: ${log}")
-        if (!log.text.contains('All 5 required tests passed') || !log.text.contains('5 GAME TESTS COMPLETE'))
-            throw new GradleException("Missing five-test native completion: ${log}")
+        if (!log.text.contains('All 6 required tests passed') || !log.text.contains('6 GAME TESTS COMPLETE'))
+            throw new GradleException("Missing six-test native completion: ${log}")
         def failures = log.readLines().findAll { line ->
             ['/ERROR]', '/FATAL]', '[ERROR]', '[FATAL]', 'Mixin apply failed'].any { line.contains(it) }
         }
