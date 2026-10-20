@@ -21,7 +21,8 @@ class BeverageIntegrationContractTest {
         assertTrue(integration.contains("event.to() == 1.0"));
         assertTrue(integration.contains("MetabolicStateStore.save(player)"));
         assertTrue(integration.contains("state.blackoutX = player.getX()"));
-        assertTrue(integration.contains("MetabolicStateStore.get(event.player()).blackout) event.setCanceled(true)"));
+        assertTrue(integration.contains("if (MetabolicStateStore.get(event.player()).blackout) {\n            event.setCanceled(true);"));
+        assertTrue(integration.contains("RuntimeDiagnostics.event(\"beverage\", \"beverage.check\", \"vetoed\", \"blackout\")"));
     }
 
     @Test

@@ -44,7 +44,7 @@ class NativeBeverageDietContractTest {
             assertFalse(source.contains("LivingEntityUseItemEvent"));
             assertFalse(source.contains("finishUsingItem("));
             assertFalse(source.contains("amplification("));
-            assertTrue(source.contains("if (state.blackout) return;"));
+            assertTrue(source.contains("if (state.blackout) {\n            RuntimeDiagnostics.event(\"beverage\", \"beverage.release\", \"rejected\", \"blackout_defense\"); return;"));
             assertTrue(source.contains("stack.is(Items.MILK_BUCKET)"));
             assertFalse(source.contains("MILK_BOTTLE"), "Bottles use normal Diet lookup, not bucket overrides");
         } finally {

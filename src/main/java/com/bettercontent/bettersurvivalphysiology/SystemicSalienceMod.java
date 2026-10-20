@@ -13,6 +13,7 @@ public final class SystemicSalienceMod {
     public static final String MOD_ID = "better_survival_physiology";
 
     public SystemicSalienceMod() {
+        com.bettercontent.bettersurvivalphysiology.diagnostics.RuntimeDiagnostics.initialize();
         ModSounds.register(FMLJavaModLoadingContext.get().getModEventBus());
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, SalienceConfig.SPEC);
         SalienceNetwork.init();

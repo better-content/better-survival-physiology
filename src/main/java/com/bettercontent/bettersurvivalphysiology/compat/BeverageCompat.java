@@ -1,6 +1,8 @@
 package com.bettercontent.bettersurvivalphysiology.compat;
 
 import com.bettercontent.betterdrinkingwater.api.BeverageEvents;
+import com.bettercontent.bettersurvivalphysiology.diagnostics.RuntimeDiagnostics;
+import com.bettercontent.bettersurvivalphysiology.diagnostics.PlaytestLog;
 import com.bettercontent.bettersurvivalphysiology.metabolism.ConsumableProfiles;
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicStateStore;
 import com.bettercontent.bettersurvivalphysiology.nutrition.BeverageNutrition;
@@ -93,15 +95,22 @@ public final class BeverageCompat {
 
     @SubscribeEvent
     public static void check(BeverageEvents.Check event) {
-        if (MetabolicStateStore.get(event.player()).blackout) event.setCanceled(true);
+        if (MetabolicStateStore.get(event.player()).blackout) {
+            event.setCanceled(true);
+            RuntimeDiagnostics.event("beverage", "beverage.check", "vetoed", "blackout");
+        }
     }
 
     @SubscribeEvent
     public static void sip(BeverageEvents.Sip event) {
-        if (BeverageNutrition.fraction(event.from(), event.to()) == 0.0) return;
+        if (BeverageNutrition.fraction(event.from(), event.to()) == 0.0) {
+            RuntimeDiagnostics.event("beverage", "beverage.release", "rejected", "invalid_or_empty_fraction"); return;
+        }
         var player = event.player();
         var state = MetabolicStateStore.get(player);
-        if (state.blackout) return; // Defensive: engine checks before purchase and paid release too.
+        if (state.blackout) {
+            RuntimeDiagnostics.event("beverage", "beverage.release", "rejected", "blackout_defense"); return;
+        } // Defensive: engine checks before purchase and paid release too.
         var before = DietBridge.snapshot(player);
         double sugarBefore = state.sugar, alcoholBefore = state.alcohol;
         CompoundTag nutrition = event.nutrition();
@@ -129,5 +138,12 @@ public final class BeverageCompat {
         SalienceEvents.beverageFeedback(player, before, sugarBefore, alcoholBefore,
                 nutrition.getBoolean(EDIBLE), event.to() == 1.0);
         MetabolicStateStore.save(player);
+        if (RuntimeDiagnostics.LOG.enabled("beverage")) {
+            double sugarAfter = state.sugar, alcoholAfter = state.alcohol;
+            com.bettercontent.bettersurvivalphysiology.diagnostics.FeatureObservation.release(RuntimeDiagnostics.LOG,
+                () -> new PlaytestLog.Context("server", player.level().dimension().location().toString(),
+                    player.level().getGameTime(), player.getUUID().toString(), ""),
+                event.from(), event.to(), sugarBefore, sugarAfter, alcoholBefore, alcoholAfter);
+        }
     }
 }
