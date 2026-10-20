@@ -34,7 +34,8 @@ public final class DietBenefits {
             case ENDURANCE -> String.format("Hunger/thirst/stamina costs -%.1f%%; loads extra", 100 * NutritionEffects.resourceSavings(n, nectar));
             case ROBUSTNESS -> String.format("Heat/cold drift -%.1f%%", 100 * NutritionEffects.temperatureResistance(n, nectar));
             case RENEWAL -> String.format("Harmful effects fade ×%.2f faster", 1 + NutritionEffects.harmfulExpiryBonus(n, nectar));
-            case TEMPO -> String.format("Benefits & Draught penalties ×%.2f; hunger/nutrient drain ×%.2f",
+            case TEMPO -> String.format("Benefits & %s penalties ×%.2f; hunger/nutrient drain ×%.2f",
+                    AspectIdentity.CONTROL.displayName,
                     MetabolicMath.amplification(n), MetabolicMath.sugarDrain(n));
             case CONTROL -> PresentationFlags.has(state.flags(), PresentationFlags.CONTROL_BLACKOUT)
                     ? "Blackout: no actions or movement. Clears below 85%."
@@ -54,7 +55,8 @@ public final class DietBenefits {
             case ENDURANCE -> "All resource costs fall from 0 to -50%; emergency reserve at 80%";
             case ROBUSTNESS -> "Temperature drift falls from 0 to -70%; temperature guard at 80%";
             case RENEWAL -> "Harmful-effect expiry scales from 1× to 2×; meal recovery at 40%, cleanse at 80%";
-            case TEMPO -> "Amplifies nutrients and Draught's benefits AND penalties; consumption grows exponentially";
+            case TEMPO -> "Amplifies nutrients and " + AspectIdentity.CONTROL.displayName
+                    + "'s benefits AND penalties; consumption grows exponentially";
             case CONTROL -> "Damage reduction scales from 0 to 30%; impairment above 30%, blackout at 100%";
         };
     }
@@ -80,7 +82,7 @@ public final class DietBenefits {
                 perk(result, state, aspect, .80f, "5 valid breaks: +100% mining speed for 5s.");
             }
             case MOBILITY -> {
-                perk(result, state, aspect, .20f, "Fall damage -35% × Berry level");
+                perk(result, state, aspect, .20f, "Fall damage -35% × " + aspect.displayName + " level");
                 perk(result, state, aspect, .40f, "Sprint 3s: +12% extra move/swim speed.");
                 perk(result, state, aspect, .80f, "Sprint-jump: forward leap. Cooldown 12s.");
             }
@@ -114,7 +116,8 @@ public final class DietBenefits {
     private static GuideTier continuousGuide(AspectIdentity aspect, float sample, MetabolicSyncPacket state) {
         String text;
         if (aspect == AspectIdentity.TEMPO) {
-            text = String.format("Benefits & Draught penalties ×%.2f; hunger/nutrient drain ×%.2f",
+            text = String.format("Benefits & %s penalties ×%.2f; hunger/nutrient drain ×%.2f",
+                    AspectIdentity.CONTROL.displayName,
                     MetabolicMath.amplification(sample), MetabolicMath.sugarDrain(sample));
         } else {
             double impairment = MetabolicMath.alcoholImpairment(sample, state.sugar());

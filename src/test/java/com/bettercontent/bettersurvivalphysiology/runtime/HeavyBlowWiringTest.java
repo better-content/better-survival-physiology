@@ -30,6 +30,15 @@ class HeavyBlowWiringTest {
         assertEquals(1, occurrences(events, "cueAt(player, AspectIdentity.IMPACT, \"Heavy Blow\""));
         assertEquals(1, occurrences(events, "activation(player, AspectIdentity.IMPACT, \"Heavy Blow ready\")"));
         assertTrue(attack.contains("state.heavyBlowFeedback.attacked();"));
+        String feedback = events.substring(events.indexOf("private static boolean updatePresentationFeedback("),
+                events.indexOf("private static void updateNutritionFalls("));
+        assertTrue(events.contains("updatePresentationFeedback(player, state, nutrition, presentation.flags())"));
+        assertTrue(feedback.contains("NutritionSnapshot nutrition, int flags"));
+        assertTrue(feedback.contains("HeavyBlow.eligible(nutrition.proteins(), SalienceConfig.SECOND,"));
+        assertTrue(feedback.contains("state.heavyBlowCooldown, player.level().getGameTime(), state.lastAttackTick, state.blackout)"));
+        assertTrue(feedback.contains("state.heavyBlowFeedback.update(heavyBlowEligible, player.getAttackStrengthScale(0.5f))"));
+        assertFalse(feedback.contains("PresentationFlags.IMPACT_READY"));
+        assertFalse(feedback.contains("DietBridge.snapshot("));
         assertFalse(Files.readString(SOURCE.resolve("compat/EpicFightCompat.java")).contains("cueAt("));
         assertFalse(Files.readString(SOURCE.resolve("compat/EpicFightCompat.java")).contains("playSound("));
     }

@@ -38,7 +38,7 @@ public final class ClientSalienceEvents {
         if (PresentationFlags.has(state.flags(), PresentationFlags.CONTROL_BLACKOUT)) {
             int width = event.getWindow().getGuiScaledWidth(), height = event.getWindow().getGuiScaledHeight();
             event.getGuiGraphics().fill(0, 0, width, height, 0xE0000000);
-            event.getGuiGraphics().drawCenteredString(minecraft.font, "Draught blackout", width / 2, height / 2, 0xFFE8DCC4);
+            event.getGuiGraphics().drawCenteredString(minecraft.font, AspectIdentity.CONTROL.displayName + " blackout", width / 2, height / 2, 0xFFE8DCC4);
         }
         var entries = NutritionHud.entries(state);
         if (entries.isEmpty()) return;
@@ -66,7 +66,7 @@ public final class ClientSalienceEvents {
             DietApi.getInstance().get(minecraft.player, event.getItemStack()).get()
                     .forEach((group, gain) -> gains.put(group.getName(), gain.doubleValue()));
         } catch (RuntimeException ignored) { return; }
-        var entries = FoodNutrients.entries(gains, ConsumableProfiles.sugar(event.getItemStack()),
+        var entries = FoodNutrients.entries(gains, ConsumableProfiles.servingSugar(event.getItemStack(), gains),
                 ConsumableProfiles.alcohol(event.getItemStack()), event.getItemStack().is(net.minecraft.world.item.Items.MILK_BUCKET));
         if (entries.isEmpty()) return;
         MutableComponent line = Component.empty();

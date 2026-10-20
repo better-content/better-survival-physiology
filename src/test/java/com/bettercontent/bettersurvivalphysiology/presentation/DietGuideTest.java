@@ -41,13 +41,21 @@ final class DietGuideTest {
         assertTrue(sugar.get(0).current());
         assertFalse(sugar.get(1).current());
         assertTrue(sugar.get(1).effect().contains("hunger/nutrient drain"));
-        assertTrue(sugar.get(1).effect().contains("Draught penalties"));
+        assertTrue(sugar.get(1).effect().contains("Booze penalties"));
 
         var alcohol = DietBenefits.guide(AspectIdentity.CONTROL, state(0, 0, 0, .70f, 0, .5f, .75f, .9f));
         assertTrue(alcohol.get(0).current());
         assertTrue(alcohol.get(1).current());
         assertTrue(alcohol.get(2).current());
         assertFalse(alcohol.get(3).current());
+    }
+
+    @Test
+    void derivativeCopyUsesTheRenamedGroups() {
+        var snapshot = state(0, .30f, 0, 0, 0, .5f, .75f, .9f);
+        assertTrue(DietBenefits.current(AspectIdentity.TEMPO, snapshot).contains("Booze penalties"));
+        assertTrue(DietBenefits.effect(AspectIdentity.TEMPO, NutritionTier.SECOND).contains("Booze's"));
+        assertTrue(DietBenefits.guide(AspectIdentity.MOBILITY, snapshot).get(1).effect().contains("Fruit level"));
     }
 
     @Test

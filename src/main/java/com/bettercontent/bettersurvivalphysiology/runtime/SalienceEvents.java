@@ -107,7 +107,7 @@ public final class SalienceEvents {
             double burst = 0.35 * nutrition.fruits() * MetabolicMath.amplification(state.sugar);
             player.push(player.getLookAngle().x * burst, 0.0, player.getLookAngle().z * burst);
             state.orchardBurstCooldown = (int) (12 * 20 / MetabolicMath.amplification(state.sugar));
-            activation(player, AspectIdentity.MOBILITY, "Berry leap");
+            activation(player, AspectIdentity.MOBILITY, AspectIdentity.MOBILITY.displayName + " leap");
         }
         state.wasOnGround = player.onGround();
         applyIdentityModifiers(player, state, nutrition);
@@ -122,7 +122,7 @@ public final class SalienceEvents {
         }
 
         PresentationSnapshot presentation = PresentationSnapshot.create(player, nutrition, state);
-        boolean presentationChanged = updatePresentationFeedback(player, state, presentation.flags());
+        boolean presentationChanged = updatePresentationFeedback(player, state, nutrition, presentation.flags());
 
         if (player.tickCount % 20 == 0) {
             DietBridge.drainUpperBand(player, SalienceConfig.FOURTH, state.sugar);
@@ -183,7 +183,7 @@ public final class SalienceEvents {
     public static void onUseStart(LivingEntityUseItemEvent.Start event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         ItemStack stack = event.getItem();
-        if (stack.isEdible() || ConsumableProfiles.sugar(stack) > 0.0 || ConsumableProfiles.isAlcohol(stack)
+        if (stack.isEdible() || ConsumableProfiles.baseSugar(stack) > 0.0 || ConsumableProfiles.isAlcohol(stack)
                 || stack.is(net.minecraft.world.item.Items.MILK_BUCKET)) {
             MetabolicState state = MetabolicStateStore.get(player);
             if (state.blackout) { event.setCanceled(true); return; }
@@ -210,7 +210,7 @@ public final class SalienceEvents {
             if (baseline != null) PENDING_FRUIT_EFFECTS.put(player.getUUID(),
                     new PendingFruitEffects(baseline, player.level().getGameTime() + 1));
         }
-        double sugar = ConsumableProfiles.sugar(stack);
+        double sugar = ConsumableProfiles.servingSugar(player, stack);
         if (sugar > 0.0) {
             state.addSugar(sugar);
             activation(player, AspectIdentity.TEMPO, "Nectar ×" + String.format("%.1f", MetabolicMath.amplification(state.sugar)));
@@ -457,11 +457,13 @@ public final class SalienceEvents {
         SalienceNetwork.sync(player, current, state);
     }
 
-    private static boolean updatePresentationFeedback(ServerPlayer player, MetabolicState state, int flags) {
-        // Independent of the other presentation flags: login's native attack recharge must
-        // settle silently, and an attack between ticks must still re-arm the next ready cue.
-        if (state.heavyBlowFeedback.update(PresentationFlags.has(flags, PresentationFlags.IMPACT_READY),
-                player.getAttackStrengthScale(0.5f))) {
+    private static boolean updatePresentationFeedback(ServerPlayer player, MetabolicState state,
+                                                      NutritionSnapshot nutrition, int flags) {
+        // Availability, not the charge-dependent presentation flag, re-arms the announcement.
+        // Item swaps may interrupt native charge without ending the current eligibility cycle.
+        boolean heavyBlowEligible = HeavyBlow.eligible(nutrition.proteins(), SalienceConfig.SECOND,
+                state.heavyBlowCooldown, player.level().getGameTime(), state.lastAttackTick, state.blackout);
+        if (state.heavyBlowFeedback.update(heavyBlowEligible, player.getAttackStrengthScale(0.5f))) {
             activation(player, AspectIdentity.IMPACT, "Heavy Blow ready");
         }
         int previous = state.lastPresentationFlags;

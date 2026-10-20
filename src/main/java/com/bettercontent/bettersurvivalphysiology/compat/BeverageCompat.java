@@ -7,7 +7,6 @@ import com.bettercontent.bettersurvivalphysiology.nutrition.BeverageNutrition;
 import com.bettercontent.bettersurvivalphysiology.nutrition.DietBridge;
 import com.bettercontent.bettersurvivalphysiology.nutrition.NutritionSnapshot;
 import com.bettercontent.bettersurvivalphysiology.runtime.SalienceEvents;
-import com.illusivesoulworks.diet.api.DietApi;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.common.MinecraftForge;
@@ -29,20 +28,24 @@ public final class BeverageCompat {
     public static void profile(BeverageEvents.Profile event) {
         var stack = event.stack();
         CompoundTag gains = new CompoundTag();
+        event.nutrition().putDouble(SUGAR, 0.0);
         if (stack.is(Items.MILK_BUCKET)) {
             // Explicit physiology award, not an additional native Diet award.
             gains.putDouble("dairy", .06);
             gains.putDouble("fats", .06);
         } else {
-            DietApi.getInstance().get(event.player(), stack).get().forEach((group, gain) -> {
+            var resolved = ConsumableProfiles.dietGains(event.player(), stack);
+            resolved.ifPresent(serving -> {
                 for (NutritionSnapshot.Group ordinary : NutritionSnapshot.Group.values()) {
-                    if (ordinary.id.equals(group.getName()))
-                        gains.putDouble(ordinary.id, BeverageNutrition.boundedGain(gain.doubleValue()));
+                    if (serving.containsKey(ordinary.id))
+                        gains.putDouble(ordinary.id, BeverageNutrition.boundedGain(serving.get(ordinary.id)));
                 }
             });
+            // Capture once before payment; paid profiles keep this entitlement across saves/sips.
+            event.nutrition().putDouble(SUGAR, resolved.map(serving ->
+                    BeverageNutrition.boundedGain(ConsumableProfiles.servingSugar(stack, serving))).orElse(0.0));
         }
         event.nutrition().put(DIET, gains);
-        event.nutrition().putDouble(SUGAR, BeverageNutrition.boundedGain(ConsumableProfiles.sugar(stack)));
         event.nutrition().putDouble(ALCOHOL, BeverageNutrition.boundedGain(ConsumableProfiles.alcohol(stack)));
         event.nutrition().putBoolean(EDIBLE, stack.isEdible());
         event.nutrition().putString(ITEM, net.minecraft.core.registries.BuiltInRegistries.ITEM

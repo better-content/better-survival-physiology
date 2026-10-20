@@ -1,5 +1,6 @@
 package com.bettercontent.bettersurvivalphysiology.presentation;
 
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -16,9 +17,37 @@ class FoodNutrientsTest {
     @Test
     void nativeGainsUsePackNamesAndStableHorizontalOrder() {
         var entries = FoodNutrients.entries(Map.of("diet:proteins", .025, "fruits", .06, "grains", .1), .06, 0, false);
-        assertEquals(List.of("Sinew", "Nectar", "Grain", "Berry"),
+        assertEquals(List.of("Flesh", "Nectar", "Grain", "Fruit"),
                 entries.stream().map(entry -> entry.aspect().displayName).toList());
         assertEquals(List.of("+2.5%", "+6%", "+10%", "+6%"),
+                entries.stream().map(FoodNutrients.Entry::percentage).toList());
+    }
+
+    @Test
+    void allPackNamesMatchDietLabelsAndKeepNativeGroupIdentities() throws Exception {
+        var labels = List.of("Flesh", "Nectar", "Grain", "Fruit", "Tallow", "Earth", "Cream", "Booze");
+        var groups = List.of("proteins", "sugars", "grains", "fruits", "fats", "vegetables", "dairy", "alcohol");
+        var aspects = AspectIdentity.values();
+        var language = JsonParser.parseString(Files.readString(
+                Path.of("src/main/resources/assets/diet/lang/en_us.json"))).getAsJsonObject();
+        assertEquals(labels, java.util.Arrays.stream(aspects).map(aspect -> aspect.displayName).toList());
+        for (int index = 0; index < aspects.length; index++) {
+            var aspect = aspects[index];
+            String group = groups.get(index);
+            assertEquals(index, aspect.icon);
+            assertEquals(group.equals("sugars") ? "sugar" : group, aspect.representative);
+            assertSame(aspect, AspectIdentity.fromGroupName(group));
+            assertSame(aspect, AspectIdentity.fromGroupName("diet:" + group));
+            assertEquals(labels.get(index), language.get("groups.diet." + group + ".name").getAsString());
+        }
+    }
+
+    @Test
+    void allEightServingGainsKeepTheirValuesAndOrder() {
+        var entries = FoodNutrients.entries(Map.of("proteins", .01, "grains", .03, "fruits", .04,
+                "fats", .05, "vegetables", .06, "dairy", .07), .02, .08, false);
+        assertEquals(List.of(AspectIdentity.values()), entries.stream().map(FoodNutrients.Entry::aspect).toList());
+        assertEquals(List.of("+1%", "+2%", "+3%", "+4%", "+5%", "+6%", "+7%", "+8%"),
                 entries.stream().map(FoodNutrients.Entry::percentage).toList());
     }
 

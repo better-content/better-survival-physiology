@@ -86,7 +86,7 @@ public final class PhysiologyBeverageGameTests {
             var player = player(helper);
             var stack = item(id);
             var state = MetabolicStateStore.get(player);
-            double sugar = ConsumableProfiles.sugar(stack), alcohol = ConsumableProfiles.alcohol(stack);
+            double sugar = ConsumableProfiles.servingSugar(player, stack), alcohol = ConsumableProfiles.alcohol(stack);
             helper.assertTrue(sugar > 0 || alcohol > 0, "Real source must exercise metabolic dose: " + id);
             source(player, stack);
             player.getFoodData().setFoodLevel(10);
@@ -94,18 +94,55 @@ public final class PhysiologyBeverageGameTests {
             var reserve = reserve(player);
             int hydration = reserve.getInt("thirst");
             near(helper, state.sugar, sugar / hydration, "Partial Nectar " + id);
-            near(helper, state.alcohol, alcohol / hydration, "Partial Draught " + id);
+            near(helper, state.alcohol, alcohol / hydration, "Partial Booze " + id);
             var nutrition = reserve.getCompound("beverage").getCompound("nutrition").copy();
             // Explicit native NBT save/read boundary, leaving the source slot empty after upfront payment.
             var encoded = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG).copy();
             player.getPersistentData().put(Player.PERSISTED_NBT_TAG, encoded.copy());
             for (int index = 1; index < hydration; index++) sip(player, 1);
             near(helper, state.sugar, sugar, "Whole Nectar exactly once " + id);
-            near(helper, state.alcohol, alcohol, "Whole Draught exactly once " + id);
+            near(helper, state.alcohol, alcohol, "Whole Booze exactly once " + id);
             for (var group : NutritionSnapshot.Group.values())
                 near(helper, DietBridge.snapshot(player).actual(group), nutrition.getCompound("diet")
                         .getDouble(group.id), "Whole native Diet entitlement exactly once " + id + "/" + group.id);
         }
+        helper.succeed();
+    }
+
+    @GameTest(templateNamespace = SystemicSalienceMod.MOD_ID, template = "empty")
+    public static void nectarProfilesUsePotentialNativeGainsAndPreservePaidEntitlements(GameTestHelper helper) {
+        for (String id : new String[]{"minecraft:sweet_berries", "farmersdelight:chocolate_pie_slice",
+                "minecraft:honey_bottle", "brewinandchewin:beer"}) {
+            var player = player(helper);
+            var stack = item(id);
+            var nativeGains = ConsumableProfiles.dietGains(player, stack).orElseThrow();
+            double smallest = Double.POSITIVE_INFINITY;
+            for (var group : NutritionSnapshot.Group.values()) {
+                double gain = nativeGains.getOrDefault(group.id, 0.0);
+                if (Double.isFinite(gain) && gain > 0) smallest = Math.min(smallest, gain);
+            }
+            double expected = Math.min(ConsumableProfiles.baseSugar(stack), smallest * .5);
+            var nutrition = new CompoundTag();
+            MinecraftForge.EVENT_BUS.post(new BeverageEvents.Profile(player, stack, nutrition));
+            near(helper, nutrition.getDouble("sugar"), expected, "Captured capped whole-serving Nectar " + id);
+            near(helper, ConsumableProfiles.servingSugar(player, stack), expected, "Direct resolver agrees " + id);
+            for (var group : NutritionSnapshot.Group.values())
+                DietBridge.tracker(player).orElseThrow().setValue(group.id, .999f);
+            near(helper, ConsumableProfiles.servingSugar(player, stack), expected, "Current capacity cannot change dose " + id);
+            var full = new CompoundTag();
+            MinecraftForge.EVENT_BUS.post(new BeverageEvents.Profile(player, stack, full));
+            near(helper, full.getDouble("sugar"), expected, "Full tracker profile uses potential gains " + id);
+        }
+        // A legacy paid payload is an entitlement, not a fresh dose lookup.
+        var player = player(helper);
+        var paid = new CompoundTag();
+        paid.putDouble("sugar", .22);
+        paid.putString("item", "minecraft:sweet_berries");
+        CompoundTag persisted = paid.copy();
+        MinecraftForge.EVENT_BUS.post(new BeverageEvents.Sip(player, persisted, 0, .25));
+        MinecraftForge.EVENT_BUS.post(new BeverageEvents.Sip(player, persisted, .25, 1));
+        near(helper, MetabolicStateStore.get(player).sugar, .22, "Stored legacy dose is not recapped per sip");
+        helper.assertTrue(paid.equals(persisted), "Paid payload remains unchanged");
         helper.succeed();
     }
 

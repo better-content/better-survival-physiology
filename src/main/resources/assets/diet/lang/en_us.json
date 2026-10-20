@@ -1,10 +1,10 @@
 {
-  "groups.diet.proteins.name": "Sinew",
+  "groups.diet.proteins.name": "Flesh",
   "groups.diet.sugars.name": "Nectar",
   "groups.diet.grains.name": "Grain",
-  "groups.diet.fruits.name": "Berry",
+  "groups.diet.fruits.name": "Fruit",
   "groups.diet.fats.name": "Tallow",
-  "groups.diet.vegetables.name": "Root",
+  "groups.diet.vegetables.name": "Earth",
   "groups.diet.dairy.name": "Cream",
-  "groups.diet.alcohol.name": "Draught"
+  "groups.diet.alcohol.name": "Booze"
 }
