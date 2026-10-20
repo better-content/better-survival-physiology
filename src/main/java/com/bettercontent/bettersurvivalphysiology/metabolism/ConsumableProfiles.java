@@ -26,6 +26,7 @@ public final class ConsumableProfiles {
 
     /** Tag eligibility and upper bound only; never use directly as a resolved serving award. */
     public static double baseSugar(ItemStack stack) {
+        if (plant(stack)) return com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.plantSugar(stack);
         if (!stack.is(DIET_SUGARS)) return 0.0;
         if (stack.is(SUGAR_HIGH)) return 0.34;
         if (stack.is(SUGAR_MEDIUM)) return 0.22;
@@ -39,6 +40,7 @@ public final class ConsumableProfiles {
 
     /** Resolve potential gains, not remaining tracker capacity. Failed lookup never means pure Nectar. */
     public static Optional<Map<String, Double>> dietGains(Player player, ItemStack stack) {
+        if (plant(stack)) return Optional.of(com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.plantGains(stack));
         try {
             Map<String, Double> gains = new HashMap<>();
             DietApi.getInstance().get(player, stack).get()
@@ -58,6 +60,11 @@ public final class ConsumableProfiles {
     public static double alcohol(ItemStack stack) {
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         return AlcoholProfiles.potency(id.toString());
+    }
+
+    private static boolean plant(ItemStack stack) {
+        return net.minecraftforge.fml.ModList.get().isLoaded("better_drinking_water")
+                && com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.manages(stack);
     }
 
     public static boolean isAlcohol(ItemStack stack) {

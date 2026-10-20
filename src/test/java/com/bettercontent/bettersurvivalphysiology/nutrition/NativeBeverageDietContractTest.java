@@ -33,7 +33,11 @@ class NativeBeverageDietContractTest {
             assertTrue(consume.contains("fireConsumeStackEvent"));
             assertTrue(consume.contains("Method apply:"));
             String source = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/compat/BeverageCompat.java"));
-            assertTrue(source.contains("DietApi.getInstance().get(event.player(), stack).get()"));
+            assertTrue(source.contains("ConsumableProfiles.dietGains(event.player(), stack)"));
+            String resolver = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/metabolism/ConsumableProfiles.java"));
+            assertTrue(resolver.contains("DietApi.getInstance().get(player, stack).get()"));
+            assertTrue(source.contains("if (manages(event.getStack())) event.setCanceled(true)"),
+                    "New native plant bottles veto only their duplicate Diet whole-item award");
             assertTrue(source.contains("diet.setValue(group.id"));
             assertTrue(source.contains("diet.sync()"));
             assertFalse(source.contains("diet.consume("));

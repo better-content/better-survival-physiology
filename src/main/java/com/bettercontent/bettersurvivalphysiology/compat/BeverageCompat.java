@@ -24,12 +24,51 @@ public final class BeverageCompat {
 
     public static void register() { MinecraftForge.EVENT_BUS.register(BeverageCompat.class); }
 
+    /** New native plant bottles release their explicit typed entitlement themselves. */
+    public static boolean manages(net.minecraft.world.item.ItemStack stack) {
+        return com.bettercontent.betterdrinkingwater.PlantDrinks.contains(
+                net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+    }
+
+    public static java.util.Map<String, Double> plantGains(net.minecraft.world.item.ItemStack stack) {
+        String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        java.util.Map<String, Double> gains = new java.util.LinkedHashMap<>();
+        for (NutritionSnapshot.Group group : NutritionSnapshot.Group.values()) {
+            double dose = com.bettercontent.betterdrinkingwater.PlantDrinks.nutrient(id, group.id);
+            if (dose > 0) gains.put(group.id, dose);
+        }
+        return java.util.Map.copyOf(gains);
+    }
+    public static double plantSugar(net.minecraft.world.item.ItemStack stack) {
+        return com.bettercontent.betterdrinkingwater.PlantDrinks.nutrient(
+                net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString(), SUGAR);
+    }
+
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGHEST)
+    public static void preventNativeWholePlantAward(com.illusivesoulworks.diet.api.DietEvent.ConsumeItemStack event) {
+        // Diet's native Finish listener independently calls consume(stack), even without super.
+        // These exact new bottles already awarded their typed entitlement. Never veto native drinks.
+        if (manages(event.getStack())) event.setCanceled(true);
+    }
+
     @SubscribeEvent
     public static void profile(BeverageEvents.Profile event) {
         var stack = event.stack();
         CompoundTag gains = new CompoundTag();
         event.nutrition().putDouble(SUGAR, 0.0);
-        if (stack.is(Items.MILK_BUCKET)) {
+        String drinkId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        if (com.bettercontent.betterdrinkingwater.PlantDrinks.contains(drinkId)) {
+            // Authored 250 mB entitlements. No native whole-food/Diet finish callback is replayed.
+            for (NutritionSnapshot.Group group : NutritionSnapshot.Group.values()) {
+                double amount = com.bettercontent.betterdrinkingwater.PlantDrinks.nutrient(drinkId, group.id);
+                if (amount > 0) gains.putDouble(group.id, BeverageNutrition.boundedGain(amount));
+            }
+            java.util.Map<String, Double> ordinaryGains = new java.util.HashMap<>();
+            for (String group : gains.getAllKeys()) ordinaryGains.put(group, gains.getDouble(group));
+            event.nutrition().putDouble(SUGAR, BeverageNutrition.boundedGain(
+                    com.bettercontent.bettersurvivalphysiology.metabolism.NectarGain.capped(
+                            com.bettercontent.betterdrinkingwater.PlantDrinks.nutrient(drinkId, SUGAR), ordinaryGains)));
+        } else if (stack.is(Items.MILK_BUCKET)) {
             // Explicit physiology award, not an additional native Diet award.
             gains.putDouble("dairy", .06);
             gains.putDouble("fats", .06);

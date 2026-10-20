@@ -182,6 +182,8 @@ public final class SalienceEvents {
     @SubscribeEvent
     public static void onUseStart(LivingEntityUseItemEvent.Start event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (net.minecraftforge.fml.ModList.get().isLoaded("better_drinking_water")
+                && com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.manages(event.getItem())) return;
         ItemStack stack = event.getItem();
         if (stack.isEdible() || ConsumableProfiles.baseSugar(stack) > 0.0 || ConsumableProfiles.isAlcohol(stack)
                 || stack.is(net.minecraft.world.item.Items.MILK_BUCKET)) {
@@ -203,6 +205,8 @@ public final class SalienceEvents {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onUseFinish(LivingEntityUseItemEvent.Finish event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (net.minecraftforge.fml.ModList.get().isLoaded("better_drinking_water")
+                && com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.manages(event.getItem())) return;
         ItemStack stack = event.getItem();
         MetabolicState state = MetabolicStateStore.get(player);
         if (isFruitFood(stack)) {

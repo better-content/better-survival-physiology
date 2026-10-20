@@ -236,6 +236,52 @@ public final class PhysiologyBeverageGameTests {
         helper.succeed();
     }
 
+    @GameTest(templateNamespace = SystemicSalienceMod.MOD_ID, template = "empty")
+    public static void plantJuiceKeepsAuthoredNutritionAndCappedNectarAcrossPaidSips(GameTestHelper helper) {
+        var player = player(helper);
+        source(player, item("better_drinking_water:apple_juice"));
+        sip(player, 1);
+        var paid = reserve(player);
+        helper.assertTrue(paid.getInt("thirst") == 6, "Normalized plant serving buys six hydration");
+        var nutrition = paid.getCompound("beverage").getCompound("nutrition");
+        near(helper, nutrition.getCompound("diet").getDouble("fruits"), .025, "Authored 250mB fruit entitlement");
+        near(helper, nutrition.getDouble("sugar"), .0125, "Nectar obeys half-smallest-ordinary-gain cap");
+        near(helper, DietBridge.snapshot(player).fruits(), .025 / 6, "One sip is not a whole fruit award");
+        near(helper, MetabolicStateStore.get(player).sugar, .0125 / 6, "One sip is not a whole Nectar award");
+        // Altering current capacity/load cannot reprice the prepaid entitlement.
+        MetabolicStateStore.get(player).sugar = .5;
+        for (int index = 1; index < 6; index++) sip(player, 1);
+        near(helper, DietBridge.snapshot(player).fruits(), .025, "Complete plant fruit award once");
+        near(helper, MetabolicStateStore.get(player).sugar, .5 + .0125 * 5 / 6, "Only remaining paid Nectar released");
+        helper.assertTrue(reserve(player).isEmpty(), "Completed plant serving cannot replay nutrition");
+        helper.succeed();
+    }
+
+    @GameTest(templateNamespace = SystemicSalienceMod.MOD_ID, template = "empty")
+    public static void nativeManualPlantFinishDoesNotDoubleAwardThroughMealEvents(GameTestHelper helper) {
+        var player = player(helper);
+        var stack = item("better_drinking_water:apple_juice");
+        var original = stack.copy();
+        var thirst = player.getCapability(ModCapabilities.PLAYER_THIRST).resolve().orElseThrow();
+        thirst.setThirst(10);
+        player.getFoodData().setFoodLevel(10); player.getFoodData().setSaturation(0);
+        MinecraftForge.EVENT_BUS.post(new net.minecraftforge.event.entity.living.LivingEntityUseItemEvent.Start(player, original, 32));
+        var returned = stack.getItem().finishUsingItem(stack, player.level(), player);
+        MinecraftForge.EVENT_BUS.post(new net.minecraftforge.event.entity.living.LivingEntityUseItemEvent.Finish(player, original, 32, returned));
+        near(helper, DietBridge.snapshot(player).fruits(), .025, "Manual finish plus native finish event awards fruit once");
+        near(helper, MetabolicStateStore.get(player).sugar, .0125, "Manual finish plus native finish event awards Nectar once");
+        helper.assertTrue(player.getFoodData().getFoodLevel() == 11 && thirst.getThirst() == 16,
+                "Manual explicit hunger/hydration once");
+        helper.assertTrue(returned.is(Items.GLASS_BOTTLE) && stack.isEmpty(), "One manual plant bottle yields one vessel");
+        MetabolicStateStore.get(player).blackout = true;
+        thirst.setThirst(10);
+        var denied = item("better_drinking_water:apple_juice");
+        denied.getItem().finishUsingItem(denied, player.level(), player);
+        helper.assertTrue(denied.getCount() == 1 && thirst.getThirst() == 10, "Real physiology blackout veto protects manual plant purchase");
+        near(helper, DietBridge.snapshot(player).fruits(), .025, "Denied manual finish adds no second fruit award");
+        helper.succeed();
+    }
+
     private static void source(ServerPlayer player, ItemStack stack) {
         CuriosApi.getCuriosInventory(player).resolve().orElseThrow().getStacksHandler("water").orElseThrow()
                 .getStacks().setStackInSlot(0, stack.copy());

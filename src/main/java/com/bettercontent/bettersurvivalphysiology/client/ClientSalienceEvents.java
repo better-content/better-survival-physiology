@@ -62,10 +62,15 @@ public final class ClientSalienceEvents {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || !minecraft.isSameThread()) return;
         Map<String, Double> gains = new HashMap<>();
-        try {
-            DietApi.getInstance().get(minecraft.player, event.getItemStack()).get()
-                    .forEach((group, gain) -> gains.put(group.getName(), gain.doubleValue()));
-        } catch (RuntimeException ignored) { return; }
+        if (net.minecraftforge.fml.ModList.get().isLoaded("better_drinking_water")
+                && com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.manages(event.getItemStack())) {
+            gains.putAll(com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.plantGains(event.getItemStack()));
+        } else {
+            try {
+                DietApi.getInstance().get(minecraft.player, event.getItemStack()).get()
+                        .forEach((group, gain) -> gains.put(group.getName(), gain.doubleValue()));
+            } catch (RuntimeException ignored) { return; }
+        }
         var entries = FoodNutrients.entries(gains, ConsumableProfiles.servingSugar(event.getItemStack(), gains),
                 ConsumableProfiles.alcohol(event.getItemStack()), event.getItemStack().is(net.minecraft.world.item.Items.MILK_BUCKET));
         if (entries.isEmpty()) return;

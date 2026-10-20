@@ -133,6 +133,16 @@ The engine owns fraction sequencing/replay prevention; these hooks additionally 
 endpoints and defensively refuse release during blackout. Without Better Drinking Water, the
 integration class is not registered and ordinary native item consumption remains unchanged.
 
+New Better Drinking Water plant bottles have explicit authored 250 mB nutrition, rather than
+recipe-inherited or whole-fruit Diet awards. `ConsumableProfiles`, hover and paid profile capture
+read the same typed `PlantDrinks` doses. Ordinary gains remain unamplified; Nectar uses the same
+half-smallest-positive-ordinary-gain cap. Manual native completion emits the same explicit
+entitlement as automatic consumption. A narrow cancellable native `DietEvent.ConsumeItemStack`
+listener prevents only these new bottles from receiving a second whole-item Diet award through
+Diet's independent Finish listener. Ordinary consumption-start/finish bookkeeping is likewise
+skipped only for these exact managed plant bottles, preserving native specialist drinks and all
+nonplant foods. Blackout protects native manual completion as well as reserve purchase/release.
+
 It is not a global aspect registry and the other Better Content mods do not depend on it.
 
 ## Build
@@ -150,11 +160,13 @@ The build copies exact bytes into a SHA-256-versioned local flat-directory artif
 installed mod, not bundled into this artifact.
 
 `verifyFast` covers fraction conservation, hostile bounds and the pinned native Diet boundary.
-`verifyNativeBeverages` runs six nonshipping Forge GameTests with real Diet, the complete beverage
+`verifyNativeBeverages` runs nine nonshipping Forge GameTests with real Diet, the complete beverage
 provider and its core native dependencies: milk bucket fractional awards without Nectar amplification,
 milk bottle native lookup, honey/beer metabolic doses and persistence, completion-only meal recovery,
 blackout/malformed-fraction rejection, and Nectar's actual native thirst exhaustion/depletion
-(including the emergency-reserve boundary). `verifyFull` includes both plus runtime staging. Every native
+(including the emergency-reserve boundary), authored plant fraction/Nectar conservation and real
+manual item completion plus the native Forge Finish event without duplicate Diet/metabolic awards.
+`verifyFull` includes both plus runtime staging. Every native
 run uses a fresh retained directory beneath `build/gametest/`; its fixtures are excluded from the
 production JAR. Native runtime diagnostics reject failed-operation/ERROR/FATAL records. The fixture
 mirrors the provider's authored pack-side Respite/Create recipe repairs, without changing production
