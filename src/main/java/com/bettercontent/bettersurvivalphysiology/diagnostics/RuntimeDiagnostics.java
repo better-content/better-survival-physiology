@@ -21,6 +21,13 @@ public final class RuntimeDiagnostics {
         if (!LOG.enabled(category)) return;
         FeatureObservation.decision(LOG, category, event, result, reason);
     }
+    public static void playerEvent(net.minecraft.server.level.ServerPlayer player, String event, String result, String reason) {
+        if (!LOG.enabled("beverage")) return;
+        FeatureObservation.playerDecision(LOG, () -> {
+            var level = player.level();
+            return new PlaytestLog.Context("server", level.dimension().location().toString(), level.getGameTime(), player.getUUID().toString(), "");
+        }, event, result, reason);
+    }
     public static PlaytestLog.Context context(net.minecraft.world.level.Level level) {
         return new PlaytestLog.Context(level.isClientSide ? "client" : "server", level.dimension().location().toString(), level.getGameTime(), "", "");
     }

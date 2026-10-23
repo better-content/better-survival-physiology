@@ -76,8 +76,14 @@ minecraft {
 }
 
 // File dependencies bypass FG remapping. Publish an immutable, content-addressed flatDir artifact.
-def beverageInput = file(providers.gradleProperty('drinkingWaterRuntimeJar').getOrElse(
-        '../better-drinking-water/build/libs/better-drinking-water-1.1.0.jar'))
+def beverageOverride = providers.gradleProperty('drinkingWaterRuntimeJar').orNull
+def stagedProviders = providers.environmentVariable('BC_CUSTOM_MOD_JAR_DIR').orNull
+if (beverageOverride != null && beverageOverride.isBlank()) throw new GradleException('Blank drinkingWaterRuntimeJar')
+if (stagedProviders != null && stagedProviders.isBlank()) throw new GradleException('Blank BC_CUSTOM_MOD_JAR_DIR')
+if (beverageOverride == null && stagedProviders == null)
+    throw new GradleException('Bind newly qualified Water via -PdrinkingWaterRuntimeJar=... or canonical BC_CUSTOM_MOD_JAR_DIR')
+def beverageInput = file(beverageOverride != null ? beverageOverride :
+        new File(stagedProviders, 'better-drinking-water-1.1.0.jar'))
 if (!beverageInput.isFile()) throw new GradleException("Stage the beverage provider first: ${beverageInput}")
 def beverageBytes = beverageInput.bytes
 def beverageHash = java.security.MessageDigest.getInstance('SHA-256').digest(beverageBytes).encodeHex().toString()
@@ -168,7 +174,11 @@ test {
 tasks.register('verifyFast') {
     group = 'verification'
     description = 'Runs deterministic unit and resource checks.'
-    dependsOn tasks.named('check')
+    dependsOn tasks.named('check'), tasks.named('verifyNativeDiagnosticsRegression')
+}
+
+tasks.register('verifyNativeDiagnosticsRegression', Exec) {
+    commandLine 'python3', '-B', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_native_*.py'
 }
 
 tasks.register('verifyFull') {
@@ -190,14 +200,11 @@ tasks.register('verifyNativeBeverages') {
     description = 'Runs the nonshipping Forge beverage/Diet/metabolism integration fixture.'
     dependsOn tasks.named('runGameTestServer')
     doLast {
-        def log = new File(nativeRunDirectory, 'logs/latest.log')
-        if (!log.isFile()) throw new GradleException("Missing native diagnostics: ${log}")
-        if (!log.text.contains('All 9 required tests passed') || !log.text.contains('9 GAME TESTS COMPLETE'))
-            throw new GradleException("Missing nine-test native completion: ${log}")
-        def failures = log.readLines().findAll { line ->
-            ['/ERROR]', '/FATAL]', '[ERROR]', '[FATAL]', 'Mixin apply failed'].any { line.contains(it) }
+        exec {
+            commandLine 'python3', '-B', 'scripts/audit_native_diagnostics.py', '10',
+                    new File(nativeRunDirectory, 'logs/latest.log').absolutePath,
+                    new File(nativeRunDirectory, 'logs/debug.log').absolutePath
         }
-        if (!failures.isEmpty()) throw new GradleException("Native diagnostics failed: ${failures.take(8)}")
     }
 }
 
@@ -222,3 +229,5 @@ publishing {
     publications { register('mavenJava', MavenPublication) { from components.java } }
     repositories { maven { url = uri("${project.projectDir}/repo") } }
 }
+
+apply from: 'gradle/native-compat-providers.gradle'

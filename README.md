@@ -153,23 +153,33 @@ It is not a global aspect registry and the other Better Content mods do not depe
 ./gradlew verifyFull
 ```
 
-Stage Better Drinking Water first, in dependency order. The compile/runtime integration uses
-`../better-drinking-water/build/libs/better-drinking-water-1.1.0.jar`; pass
-`-PdrinkingWaterRuntimeJar=/absolute/path/to/provider.jar` for an isolated provider snapshot.
+Stage newly qualified Better Drinking Water first, in dependency order. Bind
+`-PdrinkingWaterRuntimeJar=/immutable/path/to/provider.jar` or canonical `BC_CUSTOM_MOD_JAR_DIR`;
+there is no mutable sibling `build/libs` fallback. The same effective qualified production
+Compat Fixes + Gameplay Notices runtime closure as Water is required, via that canonical directory
+or `-PcompatFixesRuntimeJar=...` and `-PgameplayNoticesRuntimeJar=...`. These real provider inputs
+also receive content-addressed `.gradle/native-compat-providers/` snapshots. No new production
+codec registration/mixin/dispatcher is added; actual Compat owns Thirst's binding and recursion fix.
+Heat/HUD are optional and not loaded by this minimal dedicated fixture.
 The build copies exact bytes into a SHA-256-versioned local flat-directory artifact under
 `.gradle/beverage-provider/`, outside the cleanable `build/` tree, so ForgeGradle actually remaps it
 (file-collection dependencies bypass remapping). The provider is an optional
 installed mod, not bundled into this artifact.
 
 `verifyFast` covers fraction conservation, hostile bounds and the pinned native Diet boundary.
-`verifyNativeBeverages` runs nine nonshipping Forge GameTests with real Diet, the complete beverage
+`verifyNativeBeverages` runs ten nonshipping Forge GameTests with real Diet, the complete beverage
 provider and its core native dependencies: milk bucket fractional awards without Nectar amplification,
 milk bottle native lookup, honey/beer metabolic doses and persistence, completion-only meal recovery,
 blackout/malformed-fraction rejection, and Nectar's actual native thirst exhaustion/depletion
 (including the emergency-reserve boundary), authored plant fraction/Nectar conservation and real
 manual item completion plus the native Forge Finish event without duplicate Diet/metabolic awards.
+The added tenth case checks the exact native codec, all15 original GLM decodes/native loot sources,
+public applied-Mixin metadata and actual raw nested-loot/chest behavior. It registers nothing.
 `verifyFull` includes both plus runtime staging. Every native
 run uses a fresh retained directory beneath `build/gametest/`; its fixtures are excluded from the
-production JAR. Native runtime diagnostics reject failed-operation/ERROR/FATAL records. The fixture
+production JAR. Both latest and DEBUG evidence are required; native diagnostics reject actual
+loot-modifier WARN decode failures as well as ERROR/FATAL/mixin failures. Exact historical WARN
+regression is pure; current10-test full native acceptance is pending a new grant and qualified
+fresh Water/Compat closure, never withdrawn historical inputs. The fixture
 mirrors the provider's authored pack-side Respite/Create recipe repairs, without changing production
 resources. Source fixture success is not full-pack runtime acceptance.

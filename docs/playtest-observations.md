@@ -6,7 +6,7 @@ This repository owns the observations at `BeverageCompat`. Authoritative source 
 behavior owner; the local full gate tests native behavior. Logging source/privacy contracts
 are not pack runtime, performance or visual acceptance.
 
-Blackout check veto and invalid/empty fraction rejection remain ordinary diagnostic outcomes. Actual release logs fraction and existing sugar/alcohol before/after after the owned save call, not whole-item completion or guaranteed nutrient delivery. Native UUID is a causal subject, never a name. Nutrition/profile NBT, Diet groups and item payloads are not logged. No additional RNG or completion callback is invoked.
+Blackout check veto and invalid/empty fraction rejection remain ordinary diagnostic outcomes. Actual release logs fraction and existing sugar/alcohol before/after after the owned save call, not whole-item completion or guaranteed nutrient delivery. Native UUID is a causal subject, never a name. Veto, invalid-fraction and defensive rejection now carry the existing authoritative event player's UUID plus dimension/tick after the enabled guard, matching successful release; simultaneous players are not conflated. No sip identifier is invented when the native event supplies none. The correlation followup needs a new full gate and leaves older qualified provider receipts unchanged. Nutrition/profile NBT, Diet groups and item payloads are not logged. No additional RNG or completion callback is invoked.
 
 ## Controls, bounds and lifecycle
 

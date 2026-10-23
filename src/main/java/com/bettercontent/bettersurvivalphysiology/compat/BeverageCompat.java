@@ -97,19 +97,19 @@ public final class BeverageCompat {
     public static void check(BeverageEvents.Check event) {
         if (MetabolicStateStore.get(event.player()).blackout) {
             event.setCanceled(true);
-            RuntimeDiagnostics.event("beverage", "beverage.check", "vetoed", "blackout");
+            RuntimeDiagnostics.playerEvent(event.player(), "beverage.check", "vetoed", "blackout");
         }
     }
 
     @SubscribeEvent
     public static void sip(BeverageEvents.Sip event) {
         if (BeverageNutrition.fraction(event.from(), event.to()) == 0.0) {
-            RuntimeDiagnostics.event("beverage", "beverage.release", "rejected", "invalid_or_empty_fraction"); return;
+            RuntimeDiagnostics.playerEvent(event.player(), "beverage.release", "rejected", "invalid_or_empty_fraction"); return;
         }
         var player = event.player();
         var state = MetabolicStateStore.get(player);
         if (state.blackout) {
-            RuntimeDiagnostics.event("beverage", "beverage.release", "rejected", "blackout_defense"); return;
+            RuntimeDiagnostics.playerEvent(player, "beverage.release", "rejected", "blackout_defense"); return;
         } // Defensive: engine checks before purchase and paid release too.
         var before = DietBridge.snapshot(player);
         double sugarBefore = state.sugar, alcoholBefore = state.alcohol;

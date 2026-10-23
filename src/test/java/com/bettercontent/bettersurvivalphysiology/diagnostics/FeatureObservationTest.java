@@ -14,25 +14,29 @@ final class FeatureObservationTest {
             public void write(String category, String level, String text) { records.add(text); }
         }, () -> 0L, new Properties());
         var contextReads = new AtomicInteger();
-        Supplier<PlaytestLog.Context> ctx = () -> { contextReads.incrementAndGet(); return PlaytestLog.Context.server("minecraft:overworld", 10); };
+        Supplier<PlaytestLog.Context> ctx = () -> { contextReads.incrementAndGet(); return new PlaytestLog.Context("server", "minecraft:overworld", 10, "00000000-0000-0000-0000-000000000042", ""); };
+        Supplier<PlaytestLog.Context> other = () -> { contextReads.incrementAndGet(); return new PlaytestLog.Context("server", "minecraft:overworld", 10, "00000000-0000-0000-0000-000000000043", ""); };
         UUID id = UUID.fromString("00000000-0000-0000-0000-000000000042");
         // Observational purity at this scalar projection seam only, not a synthetic native replay.
         long[] state = {42, 3}; long[] before = state.clone();
         var nativeRng = new Random(41); var baselineRng = new Random(41);
         FeatureObservation.release(log, ctx, 0, .5, 1, 2, 3, 4);
         FeatureObservation.release(log, ctx, .5, 1, 2, 3, 4, 5);
-        FeatureObservation.decision(log, "beverage", "beverage.check", "vetoed", "blackout");
-        FeatureObservation.decision(log, "beverage", "beverage.release", "rejected", "invalid_or_empty_fraction");
-        FeatureObservation.decision(log, "beverage", "beverage.release", "rejected", "blackout_defense");
+        FeatureObservation.playerDecision(log, ctx, "beverage.check", "vetoed", "blackout");
+        FeatureObservation.playerDecision(log, other, "beverage.release", "rejected", "invalid_or_empty_fraction");
+        FeatureObservation.playerDecision(log, ctx, "beverage.release", "rejected", "blackout_defense");
         assertTrue(records.isEmpty()); assertEquals(0, contextReads.get());
         assertArrayEquals(before, state); assertEquals(baselineRng.nextLong(), nativeRng.nextLong());
         enabled[0] = true;
         FeatureObservation.release(log, ctx, 0, .5, 1, 2, 3, 4);
         FeatureObservation.release(log, ctx, .5, 1, 2, 3, 4, 5);
-        FeatureObservation.decision(log, "beverage", "beverage.check", "vetoed", "blackout");
-        FeatureObservation.decision(log, "beverage", "beverage.release", "rejected", "invalid_or_empty_fraction");
-        FeatureObservation.decision(log, "beverage", "beverage.release", "rejected", "blackout_defense");
+        FeatureObservation.playerDecision(log, ctx, "beverage.check", "vetoed", "blackout");
+        FeatureObservation.playerDecision(log, other, "beverage.release", "rejected", "invalid_or_empty_fraction");
+        FeatureObservation.playerDecision(log, ctx, "beverage.release", "rejected", "blackout_defense");
         assertEquals(5, records.size());
+        assertEquals(5, contextReads.get());
+        assertTrue(records.get(2).contains("dimension=minecraft:overworld tick=10 subject=00000000-0000-0000-0000-000000000042"));
+        assertTrue(records.get(3).contains("dimension=minecraft:overworld tick=10 subject=00000000-0000-0000-0000-000000000043"));
         assertTrue(records.get(0).contains("result=released reason=partial"), records.toString());
         assertTrue(records.get(1).contains("result=released reason=completion"), records.toString());
         assertTrue(records.get(2).contains("result=vetoed reason=blackout"), records.toString());
