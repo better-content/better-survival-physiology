@@ -174,7 +174,12 @@ blackout/malformed-fraction rejection, and Nectar's actual native thirst exhaust
 (including the emergency-reserve boundary), authored plant fraction/Nectar conservation and real
 manual item completion plus the native Forge Finish event without duplicate Diet/metabolic awards.
 The added tenth case checks the exact native codec, all15 original GLM decodes/native loot sources,
-public applied-Mixin metadata and actual raw nested-loot/chest behavior. It registers nothing.
+the actual loaded target's runtime-retained `MixinMerged` annotation on exactly one correctly typed
+production recursion handler, and actual raw nested-loot/chest behavior. The metadata check does not
+invoke private methods or override access. `Mixins.getMixinsForClass` is not used as the acceptance
+oracle: ModLauncher's game-layer API can expose an empty transformer cache despite the original
+DEBUG log proving application. The behavioral codec/condition/nonempty same-seed raw result and
+real chest-generation assertions remain mandatory. It registers nothing.
 `verifyFull` includes both plus runtime staging. Every native
 run uses a fresh retained directory beneath `build/gametest/`; its fixtures are excluded from the
 production JAR. Both latest and DEBUG evidence are required; native diagnostics reject actual
