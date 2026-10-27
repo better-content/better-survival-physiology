@@ -63,8 +63,7 @@ public final class ConsumableProfiles {
     }
 
     private static boolean plant(ItemStack stack) {
-        return net.minecraftforge.fml.ModList.get().isLoaded("better_drinking_water")
-                && com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.manages(stack);
+        return com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.manages(stack);
     }
 
     public static boolean isAlcohol(ItemStack stack) {

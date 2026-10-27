@@ -5,7 +5,7 @@ import java.util.Set;
 
 /** Potential whole-serving gains, independent of current tracker levels and saturation. */
 public final class NectarGain {
-    private static final Set<String> LASTING = Set.of("proteins", "grains", "fruits", "fats", "vegetables", "dairy");
+    private static final Set<String> LASTING = Set.of("proteins", "grains", "fruits", "fats", "spice", "dairy");
 
     private NectarGain() {}
 

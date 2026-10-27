@@ -1,6 +1,7 @@
 package com.bettercontent.bettersurvivalphysiology.compat;
 
 import com.bettercontent.betterdrinkingwater.api.BeverageEvents;
+import com.bettercontent.bettersurvivalphysiology.nutrition.BeverageSpiceDose;
 import com.bettercontent.bettersurvivalphysiology.diagnostics.RuntimeDiagnostics;
 import com.bettercontent.bettersurvivalphysiology.diagnostics.PlaytestLog;
 import com.bettercontent.bettersurvivalphysiology.metabolism.ConsumableProfiles;
@@ -24,7 +25,11 @@ public final class BeverageCompat {
 
     private BeverageCompat() {}
 
-    public static void register() { MinecraftForge.EVENT_BUS.register(BeverageCompat.class); }
+    public static void register() {
+        MinecraftForge.EVENT_BUS.register(BeverageCompat.class);
+        SpiceBridge.registerExternalCompletionOwner(new net.minecraft.resources.ResourceLocation(
+                "better_survival_physiology", "typed_beverage"), BeverageCompat::manages);
+    }
 
     /** New native plant bottles release their explicit typed entitlement themselves. */
     public static boolean manages(net.minecraft.world.item.ItemStack stack) {
@@ -39,6 +44,8 @@ public final class BeverageCompat {
             double dose = com.bettercontent.betterdrinkingwater.PlantDrinks.nutrient(id, group.id);
             if (dose > 0) gains.put(group.id, dose);
         }
+        double units = SpiceBridge.resolveUnits(null, stack);
+        if (units > 0) gains.put("spice", SpiceBridge.dietGain(units));
         return java.util.Map.copyOf(gains);
     }
     public static double plantSugar(net.minecraft.world.item.ItemStack stack) {
@@ -86,6 +93,14 @@ public final class BeverageCompat {
             event.nutrition().putDouble(SUGAR, resolved.map(serving ->
                     BeverageNutrition.boundedGain(ConsumableProfiles.servingSugar(stack, serving))).orElse(0.0));
         }
+        // Other groups retain their established fractional entitlement. Spice is captured before payment,
+        // then paid consumed portions settle against this dose, never the later held item.
+        gains.remove("spice");
+        double units = SpiceBridge.resolveUnits(event.player(), stack);
+        if (units > 0) {
+            gains.putDouble(BeverageSpiceDose.MANTISSA, BeverageSpiceDose.mantissa(units));
+            gains.putDouble(BeverageSpiceDose.EXPONENT, BeverageSpiceDose.exponent(units));
+        }
         event.nutrition().put(DIET, gains);
         event.nutrition().putDouble(ALCOHOL, BeverageNutrition.boundedGain(ConsumableProfiles.alcohol(stack)));
         event.nutrition().putBoolean(EDIBLE, stack.isEdible());
@@ -115,10 +130,16 @@ public final class BeverageCompat {
         double sugarBefore = state.sugar, alcoholBefore = state.alcohol;
         CompoundTag nutrition = event.nutrition();
         CompoundTag gains = nutrition.getCompound(DIET);
+        if (gains.contains(BeverageSpiceDose.MANTISSA) != gains.contains(BeverageSpiceDose.EXPONENT))
+            throw new IllegalArgumentException("Incomplete captured Spice dose");
+        double wholeUnits = BeverageSpiceDose.decode(gains.getDouble(BeverageSpiceDose.MANTISSA), gains.getDouble(BeverageSpiceDose.EXPONENT));
+        double portionUnits = !player.isCreative() && !player.isSpectator()
+                ? wholeUnits * BeverageNutrition.fraction(event.from(), event.to()) : 0;
         DietBridge.tracker(player).ifPresent(diet -> {
             if (!diet.isActive()) return;
             for (NutritionSnapshot.Group group : NutritionSnapshot.Group.values()) {
-                double amount = BeverageNutrition.award(gains.getDouble(group.id), event.from(), event.to());
+                double amount = group == NutritionSnapshot.Group.SPICE ? SpiceBridge.dietGain(portionUnits)
+                        : BeverageNutrition.award(gains.getDouble(group.id), event.from(), event.to());
                 if (amount > 0.0 && diet.getValues().containsKey(group.id))
                     diet.setValue(group.id, (float) Math.min(1.0, diet.getValue(group.id) + amount));
             }
@@ -138,6 +159,7 @@ public final class BeverageCompat {
         SalienceEvents.beverageFeedback(player, before, sugarBefore, alcoholBefore,
                 nutrition.getBoolean(EDIBLE), event.to() == 1.0);
         MetabolicStateStore.save(player);
+        if (portionUnits > 0) SpiceBridge.applyCompletedUnits(player, portionUnits);
         if (RuntimeDiagnostics.LOG.enabled("beverage")) {
             double sugarAfter = state.sugar, alcoholAfter = state.alcohol;
             com.bettercontent.bettersurvivalphysiology.diagnostics.FeatureObservation.release(RuntimeDiagnostics.LOG,

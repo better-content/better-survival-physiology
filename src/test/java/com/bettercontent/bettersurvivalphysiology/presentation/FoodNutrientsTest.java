@@ -25,8 +25,8 @@ class FoodNutrientsTest {
 
     @Test
     void allPackNamesMatchDietLabelsAndKeepNativeGroupIdentities() throws Exception {
-        var labels = List.of("Flesh", "Nectar", "Grain", "Fruit", "Tallow", "Earth", "Cream", "Booze");
-        var groups = List.of("proteins", "sugars", "grains", "fruits", "fats", "vegetables", "dairy", "alcohol");
+        var labels = List.of("Flesh", "Nectar", "Grain", "Fruit", "Tallow", "Spice", "Cream", "Booze");
+        var groups = List.of("proteins", "sugars", "grains", "fruits", "fats", "spice", "dairy", "alcohol");
         var aspects = AspectIdentity.values();
         var language = JsonParser.parseString(Files.readString(
                 Path.of("src/main/resources/assets/diet/lang/en_us.json"))).getAsJsonObject();
@@ -45,7 +45,7 @@ class FoodNutrientsTest {
     @Test
     void allEightServingGainsKeepTheirValuesAndOrder() {
         var entries = FoodNutrients.entries(Map.of("proteins", .01, "grains", .03, "fruits", .04,
-                "fats", .05, "vegetables", .06, "dairy", .07), .02, .08, false);
+                "fats", .05, "spice", .06, "dairy", .07), .02, .08, false);
         assertEquals(List.of(AspectIdentity.values()), entries.stream().map(FoodNutrients.Entry::aspect).toList());
         assertEquals(List.of("+1%", "+2%", "+3%", "+4%", "+5%", "+6%", "+7%", "+8%"),
                 entries.stream().map(FoodNutrients.Entry::percentage).toList());

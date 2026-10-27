@@ -4,6 +4,8 @@ import com.bettercontent.bettersurvivalphysiology.SystemicSalienceMod;
 import com.bettercontent.bettersurvivalphysiology.metabolism.ConsumableProfiles;
 import com.bettercontent.bettersurvivalphysiology.network.MetabolicSyncPacket;
 import com.bettercontent.bettersurvivalphysiology.presentation.AspectIdentity;
+import com.bettercontent.bettersurvivalphysiology.presentation.AspectBadge;
+import com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge;
 import com.bettercontent.bettersurvivalphysiology.presentation.FoodNutrients;
 import com.bettercontent.bettersurvivalphysiology.presentation.PresentationFlags;
 import com.bettercontent.bettersurvivalphysiology.presentation.NutritionHud;
@@ -25,6 +27,8 @@ import java.util.Map;
 @Mod.EventBusSubscriber(modid = SystemicSalienceMod.MOD_ID, value = Dist.CLIENT)
 public final class ClientSalienceEvents {
     private static final ResourceLocation ICONS = new ResourceLocation(SystemicSalienceMod.MOD_ID, "textures/gui/aspect_badges.png");
+    private static final ResourceLocation SPICE_ICON = new ResourceLocation("better_spicy_farmers", "textures/gui/spice_badge.png");
+    private static final ResourceLocation OWN_SPICE_ICON = new ResourceLocation(SystemicSalienceMod.MOD_ID, "textures/gui/spice_badge.png");
     private static final ResourceLocation ASPECT_FONT = new ResourceLocation(SystemicSalienceMod.MOD_ID, "aspects");
 
     private ClientSalienceEvents() {}
@@ -46,13 +50,18 @@ public final class ClientSalienceEvents {
         int columns = Math.min(entries.size(), Math.max(1, (event.getWindow().getGuiScaledWidth() - 16) / cellWidth));
         int rows = (entries.size() + columns - 1) / columns;
         int top = event.getWindow().getGuiScaledHeight() - 72 - (rows - 1) * 30;
+        boolean spiceAvailable = SpiceBridge.available();
         for (int index = 0; index < entries.size(); index++) {
             var entry = entries.get(index);
             int row = index / columns;
             int rowSize = Math.min(columns, entries.size() - row * columns);
             int x = (event.getWindow().getGuiScaledWidth() - rowSize * cellWidth) / 2 + (index % columns) * cellWidth;
             int y = top + row * 30;
-            event.getGuiGraphics().blit(ICONS, x + (cellWidth - 18) / 2, y, entry.aspect().icon * 18, 0, 18, 18, 144, 18);
+            var badge = AspectBadge.of(entry.aspect(), spiceAvailable);
+            ResourceLocation texture = entry.aspect() == AspectIdentity.ROBUSTNESS
+                    ? (spiceAvailable ? SPICE_ICON : OWN_SPICE_ICON) : ICONS;
+            event.getGuiGraphics().blit(texture, x + (cellWidth - badge.width()) / 2, y,
+                    badge.u(), badge.v(), badge.width(), badge.height(), badge.textureWidth(), badge.textureHeight());
             event.getGuiGraphics().drawString(minecraft.font, entry.label(), x + (cellWidth - minecraft.font.width(entry.label())) / 2, y + 19, 0xffffffff, true);
         }
     }
@@ -62,8 +71,7 @@ public final class ClientSalienceEvents {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || !minecraft.isSameThread()) return;
         Map<String, Double> gains = new HashMap<>();
-        if (net.minecraftforge.fml.ModList.get().isLoaded("better_drinking_water")
-                && com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.manages(event.getItemStack())) {
+        if (com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.manages(event.getItemStack())) {
             gains.putAll(com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.plantGains(event.getItemStack()));
         } else {
             try {

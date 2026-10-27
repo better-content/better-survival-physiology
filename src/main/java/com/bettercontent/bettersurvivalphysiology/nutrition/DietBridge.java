@@ -68,7 +68,7 @@ public final class DietBridge {
                 tracker.getValue(NutritionSnapshot.Group.GRAINS.id),
                 tracker.getValue(NutritionSnapshot.Group.FRUITS.id),
                 tracker.getValue(NutritionSnapshot.Group.FATS.id),
-                tracker.getValue(NutritionSnapshot.Group.VEGETABLES.id),
+                tracker.getValue(NutritionSnapshot.Group.SPICE.id),
                 tracker.getValue(NutritionSnapshot.Group.DAIRY.id)
         );
     }

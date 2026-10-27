@@ -30,16 +30,10 @@ final class IdentityAssetContractTest {
         assertEquals(BADGE_HASH, HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
         var image = ImageIO.read(new java.io.ByteArrayInputStream(bytes));
         assertEquals(144, image.getWidth()); assertEquals(18, image.getHeight());
-        for (AspectIdentity aspect : AspectIdentity.values()) {
-            int visiblePixels = 0;
-            for (int y = 0; y < 18; y++) for (int x = aspect.icon * 18; x < (aspect.icon + 1) * 18; x++) {
-                if ((image.getRGB(x, y) >>> 24) >= 128) visiblePixels++;
-            }
-            assertTrue(visiblePixels >= 24, aspect.displayName + " badge must remain visible at 18 pixels");
+        // Keep all old atlas bytes unchanged; only slot 5 now selects a standalone generated asset.
+        BadgeResourcePureTest.run(path -> getClass().getResourceAsStream(path));
+        for (AspectIdentity aspect : AspectIdentity.values())
             assertFalse(aspect.badge().chars().anyMatch(Character::isWhitespace));
-        }
-        String font = new String(resource("/assets/better_survival_physiology/font/aspects.json").readAllBytes(), StandardCharsets.UTF_8);
-        assertTrue(font.contains(""));
     }
 
     @Test

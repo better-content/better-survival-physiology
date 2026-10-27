@@ -10,7 +10,7 @@ public enum AspectIdentity {
     WORK(2, "grains", "⚒", "Grain", "grain, bread, porridge", 0xF0E2C5),
     MOBILITY(3, "fruits", "➜", "Fruit", "fruit, berries", 0xE0B01F),
     ENDURANCE(4, "fats", "∞", "Tallow", "meat fat, oils, nuts, dairy", 0x52606A),
-    ROBUSTNESS(5, "vegetables", "◆", "Earth", "greens, roots, vegetables", 0xAF6A2F),
+    ROBUSTNESS(5, "spice", "◆", "Spice", "spices, seasoned foods", 0xD85C32),
     RENEWAL(6, "dairy", "✚", "Cream", "milk, cheese, cultured dairy", 0x6CCAF0),
     CONTROL(7, "alcohol", "⊕", "Booze", "fermented drinks", 0x8E5BB7);
 

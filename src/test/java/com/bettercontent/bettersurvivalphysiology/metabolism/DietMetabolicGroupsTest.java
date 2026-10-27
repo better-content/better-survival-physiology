@@ -20,7 +20,7 @@ class DietMetabolicGroupsTest {
         var suite = json("/data/diet/diet/suites/builtin.json");
         Set<String> groups = new HashSet<>();
         suite.getAsJsonArray("groups").forEach(group -> groups.add(group.getAsString()));
-        assertEquals(Set.of("proteins", "grains", "fruits", "fats", "vegetables", "dairy", "sugars", "alcohol"), groups);
+        assertEquals(Set.of("proteins", "grains", "fruits", "fats", "spice", "dairy", "sugars", "alcohol"), groups);
         assertTrue(suite.getAsJsonArray("effects").isEmpty());
         assertEquals(AspectIdentity.TEMPO, AspectIdentity.fromGroupName("diet:sugars"));
         assertEquals(AspectIdentity.CONTROL, AspectIdentity.fromGroupName("diet:alcohol"));
@@ -29,6 +29,11 @@ class DietMetabolicGroupsTest {
             var definition = json("/data/diet/diet/groups/" + group + ".json");
             assertEquals(aspect.icon, definition.get("order").getAsInt());
             assertEquals(String.format("#%06X", aspect.color), definition.get("color").getAsString());
+            if (group.equals("spice")) {
+                assertEquals("minecraft:blaze_powder", definition.get("icon").getAsString());
+                assertEquals(0.0, definition.get("default_value").getAsDouble());
+                assertEquals(1.0, definition.get("decay_multiplier").getAsDouble());
+            }
         }
     }
 

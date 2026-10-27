@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,10 +28,32 @@ class BeverageIntegrationContractTest {
     }
 
     @Test
+    void typedAbiAdmissionRejectsLegacyAndEveryPartialProvider() {
+        String plants = "com/bettercontent/betterdrinkingwater/PlantDrinks.class";
+        String events = "com/bettercontent/betterdrinkingwater/api/BeverageEvents.class";
+        Set<String> complete = new HashSet<>(Set.of(plants, events,
+                events.replace(".class", "$Profile.class"),
+                events.replace(".class", "$Check.class"),
+                events.replace(".class", "$Sip.class")));
+        assertFalse(com.bettercontent.bettersurvivalphysiology.compat.BeverageAbi.supportsTyped(path -> false));
+        assertTrue(com.bettercontent.bettersurvivalphysiology.compat.BeverageAbi.supportsTyped(complete::contains));
+        for (String missing : complete) {
+            Set<String> partial = new HashSet<>(complete);
+            partial.remove(missing);
+            assertThrows(IllegalStateException.class,
+                    () -> com.bettercontent.bettersurvivalphysiology.compat.BeverageAbi.supportsTyped(partial::contains),
+                    "Partial Water ABI must explicitly fail: " + missing);
+        }
+    }
+
+    @Test
     void optionalIntegrationIsGuardedAndProviderIsNotBundled() throws Exception {
         String entry = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/SystemicSalienceMod.java"));
-        assertTrue(entry.contains("isLoaded(\"better_drinking_water\")"));
+        assertTrue(entry.contains("compat.BeverageAvailability.typed()"));
         assertTrue(entry.contains("BeverageCompat.register()"));
+        String availability = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/compat/BeverageAvailability.java"));
+        assertTrue(availability.contains("ModList.get().isLoaded(\"better_drinking_water\") && Typed.PRESENT"));
+        assertTrue(availability.contains("BeverageAbi.supportsTyped(path -> loader.getResource(path) != null)"));
         String metadata = Files.readString(Path.of("src/main/resources/META-INF/mods.toml"));
         assertTrue(metadata.contains("modId=\"better_drinking_water\"\nmandatory=false"));
         String build = Files.readString(Path.of("build.gradle"));

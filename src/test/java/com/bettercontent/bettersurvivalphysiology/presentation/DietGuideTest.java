@@ -18,7 +18,7 @@ final class DietGuideTest {
         assertEquals("80%", guide.get(2).threshold());
         assertTrue(guide.get(1).current());
         assertFalse(guide.get(2).current());
-        assertEquals(1, DietBenefits.guide(AspectIdentity.ROBUSTNESS, snapshot).stream()
+        assertEquals(0, DietBenefits.guide(AspectIdentity.ROBUSTNESS, snapshot).stream()
                 .filter(tier -> tier.value() >= 0).count());
         assertEquals(3, DietBenefits.guide(AspectIdentity.WORK, snapshot).stream()
                 .filter(tier -> tier.value() >= 0).count());

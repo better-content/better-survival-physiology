@@ -1,6 +1,7 @@
 package com.bettercontent.bettersurvivalphysiology.presentation;
 
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicMath;
+import com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge;
 import com.bettercontent.bettersurvivalphysiology.metabolism.NutritionEffects;
 import com.bettercontent.bettersurvivalphysiology.network.MetabolicSyncPacket;
 import java.util.ArrayList;
@@ -19,7 +20,7 @@ public final class DietBenefits {
             case WORK -> state.grains();
             case MOBILITY -> state.fruits();
             case ENDURANCE -> state.fats();
-            case ROBUSTNESS -> state.vegetables();
+            case ROBUSTNESS -> state.spice();
             case RENEWAL -> state.dairy();
             case CONTROL -> state.alcohol();
         };
@@ -32,7 +33,9 @@ public final class DietBenefits {
             case WORK -> String.format("Right-tool mining +%.1f%%", 100 * NutritionEffects.miningSpeed(n, nectar));
             case MOBILITY -> String.format("Move/swim speed +%.1f%%", 100 * NutritionEffects.movementSpeed(n, nectar));
             case ENDURANCE -> String.format("Hunger/thirst/stamina costs -%.1f%%; loads extra", 100 * NutritionEffects.resourceSavings(n, nectar));
-            case ROBUSTNESS -> String.format("Heat/cold drift -%.1f%%", 100 * NutritionEffects.temperatureResistance(n, nectar));
+            case ROBUSTNESS -> String.format("Right-tool mining +%.1f%%; move/swim +%.1f%%",
+                    100 * SpiceBridge.miningBonus(n, MetabolicMath.amplification(nectar)),
+                    100 * SpiceBridge.movementBonus(n, MetabolicMath.amplification(nectar)));
             case RENEWAL -> String.format("Harmful effects fade ×%.2f faster", 1 + NutritionEffects.harmfulExpiryBonus(n, nectar));
             case TEMPO -> String.format("Benefits & %s penalties ×%.2f; hunger/nutrient drain ×%.2f",
                     AspectIdentity.CONTROL.displayName,
@@ -53,7 +56,8 @@ public final class DietBenefits {
             case WORK -> "Correct-tool mining scales from 0 to +100%; work sequence at 40%, grace at 60%, burst at 80%";
             case MOBILITY -> "Movement/swimming scale from 0 to +25%; safer falls at 20%, sprint stride at 40%, leap at 80%";
             case ENDURANCE -> "All resource costs fall from 0 to -50%; emergency reserve at 80%";
-            case ROBUSTNESS -> "Temperature drift falls from 0 to -70%; temperature guard at 80%";
+            case ROBUSTNESS -> String.format("Right-tool mining up to +%.0f%%; move/swim up to +%.0f%%. Nectar stays within caps.",
+                    100 * SpiceBridge.miningCap(), 100 * SpiceBridge.movementCap());
             case RENEWAL -> "Harmful-effect expiry scales from 1× to 2×; meal recovery at 40%, cleanse at 80%";
             case TEMPO -> "Amplifies nutrients and " + AspectIdentity.CONTROL.displayName
                     + "'s benefits AND penalties; consumption grows exponentially";
@@ -87,19 +91,24 @@ public final class DietBenefits {
                 perk(result, state, aspect, .80f, "Sprint-jump: forward leap. Cooldown 12s.");
             }
             case ENDURANCE -> perk(result, state, aspect, .80f, "Low food/thirst/stamina: 10s reserve. Cooldown 2m. Loads still cost extra.");
-            case ROBUSTNESS -> perk(result, state, aspect, .80f, "Block 1 heat/cold hit; reset temperature to safe. Cooldown 30s.");
+            case ROBUSTNESS -> {
+                result.add(new GuideTier("Intake", -1, String.format("+%.0f%% level per Spice unit; ordinary nutrient decay.", 100 * SpiceBridge.dietGain(1)), true));
+                result.add(new GuideTier("Serving", -1, String.format("%.1f HP per Spice unit; cap %.1f HP. Full Spice still pays.",
+                        SpiceBridge.hpPerUnit(), SpiceBridge.hpCap()), true));
+            }
             case RENEWAL -> {
                 perk(result, state, aspect, .40f, "Eat: heal 1 heart. Cooldown 30s.");
                 perk(result, state, aspect, .80f, "Clear 1 timed harmful effect. Cooldown 20s.");
             }
             default -> throw new IllegalArgumentException("Not an ordinary nutrient");
         }
-        result.add(new GuideTier("Nectar", -1, "Nectar boosts strength/timing, not unlocks. Cost/temperature savings cap at 85%.", true));
+        result.add(new GuideTier("Nectar", -1, "Nectar boosts timing, not unlocks. Spice stays within its caps; resource savings cap at 85%.", true));
         return List.copyOf(result);
     }
 
     /** Floor of the highest active behavioural unlock, not a fictitious shared tier. */
     public static double activePerkFloor(AspectIdentity aspect, double value) {
+        if (aspect == AspectIdentity.ROBUSTNESS) return 0; // Spice has no Grain/Fruit perk unlocks.
         if (value >= .80) return .80;
         if (aspect == AspectIdentity.WORK && value >= .60) return .60;
         if ((aspect == AspectIdentity.IMPACT || aspect == AspectIdentity.WORK

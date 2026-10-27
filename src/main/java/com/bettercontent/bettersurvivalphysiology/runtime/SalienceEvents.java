@@ -1,6 +1,7 @@
 package com.bettercontent.bettersurvivalphysiology.runtime;
 
 import com.bettercontent.bettersurvivalphysiology.SystemicSalienceMod;
+import com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge;
 import com.bettercontent.bettersurvivalphysiology.compat.BrewingCompat;
 import com.bettercontent.bettersurvivalphysiology.compat.ColdSweatCompat;
 import com.bettercontent.bettersurvivalphysiology.compat.EpicFightCompat;
@@ -59,6 +60,8 @@ import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = SystemicSalienceMod.MOD_ID)
 public final class SalienceEvents {
+    private static final UUID SPICE_MOVE = UUID.fromString("247b31f1-b115-421a-8401-fb69e209c7fa");
+    private static final UUID SPICE_SWIM = UUID.fromString("767811d5-130f-455d-8fa7-c007635446af");
     private static final UUID FRUIT_MOVE = UUID.fromString("613818db-da4d-42f6-ac8e-dd9c7f226c1c");
     private static final UUID FRUIT_SWIM = UUID.fromString("0d498917-ed03-4503-a129-4d403c947398");
     private static final UUID ALCOHOL_MOVE = UUID.fromString("737044e1-940d-4ddb-beb3-bd968cdfa08d");
@@ -151,6 +154,8 @@ public final class SalienceEvents {
         if (correctTool && grains >= SalienceConfig.FOURTH && state.workBurstTicks > 0) bonus += MetabolicMath.amplification(state.sugar);
         event.setNewSpeed((float) (event.getNewSpeed() * Math.max(0.05,
                 1.0 - 0.90 * MetabolicMath.alcoholImpairment(state.alcohol, state.sugar))));
+        double spice = DietBridge.snapshot(player).spice();
+        if (correctTool) bonus += SpiceBridge.miningBonus(spice, MetabolicMath.amplification(state.sugar));
         event.setNewSpeed((float) (event.getNewSpeed() * (1.0 + bonus)));
     }
 
@@ -182,8 +187,7 @@ public final class SalienceEvents {
     @SubscribeEvent
     public static void onUseStart(LivingEntityUseItemEvent.Start event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        if (net.minecraftforge.fml.ModList.get().isLoaded("better_drinking_water")
-                && com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.manages(event.getItem())) return;
+        if (com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.manages(event.getItem())) return;
         ItemStack stack = event.getItem();
         if (stack.isEdible() || ConsumableProfiles.baseSugar(stack) > 0.0 || ConsumableProfiles.isAlcohol(stack)
                 || stack.is(net.minecraft.world.item.Items.MILK_BUCKET)) {
@@ -205,8 +209,7 @@ public final class SalienceEvents {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onUseFinish(LivingEntityUseItemEvent.Finish event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        if (net.minecraftforge.fml.ModList.get().isLoaded("better_drinking_water")
-                && com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.manages(event.getItem())) return;
+        if (com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.manages(event.getItem())) return;
         ItemStack stack = event.getItem();
         MetabolicState state = MetabolicStateStore.get(player);
         if (isFruitFood(stack)) {
@@ -310,15 +313,9 @@ public final class SalienceEvents {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onHurt(LivingHurtEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (SpiceBridge.isConsumption(event.getSource())) return;
         MetabolicState state = MetabolicStateStore.get(player);
         event.setAmount((float) (event.getAmount() * (1.0 - MetabolicMath.alcoholReduction(state.alcohol, state.sugar))));
-        if (!ColdSweatCompat.isTemperatureDamage(event.getSource())) return;
-        if (DietBridge.snapshot(player).actual(NutritionSnapshot.Group.VEGETABLES) >= SalienceConfig.FOURTH && state.weatheredCooldown == 0) {
-            ColdSweatCompat.pullSafe(player);
-            event.setCanceled(true);
-            state.weatheredCooldown = (int) (30 * 20 / MetabolicMath.amplification(state.sugar));
-            activation(player, AspectIdentity.ROBUSTNESS, "Weathered Guard");
-        }
     }
 
     @SubscribeEvent
@@ -367,9 +364,12 @@ public final class SalienceEvents {
         updateAttribute(player, "minecraft:generic.movement_speed", FRUIT_MOVE, movement, AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_fruit_stride");
         updateAttribute(player, "forge:swim_speed", FRUIT_SWIM, movement, AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_fruit_swim");
 
-        double vegetables = nutrition.actual(NutritionSnapshot.Group.VEGETABLES);
-        double driftResistance = NutritionEffects.temperatureResistance(vegetables, state.sugar);
-        if (driftResistance > 0.0) ColdSweatCompat.dampenDrift(player, driftResistance);
+        double spiceMovement = SpiceBridge.movementBonus(nutrition.spice(), amplification);
+        updateAttribute(player, "minecraft:generic.movement_speed", SPICE_MOVE, spiceMovement,
+                AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_spice_move");
+        updateAttribute(player, "forge:swim_speed", SPICE_SWIM, spiceMovement,
+                AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_spice_swim");
+        // Earth no longer exists: no temperature correction or Weathered Guard.
         double impairment = MetabolicMath.alcoholImpairment(state.alcohol, state.sugar);
         updateAttribute(player, "minecraft:generic.movement_speed", ALCOHOL_MOVE,
                 -.75 * impairment, AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_alcohol_move");

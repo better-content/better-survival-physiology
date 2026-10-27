@@ -20,13 +20,12 @@ public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSe
         if (nutrition.fruits() >= SalienceConfig.SECOND && state.sprintTicks >= 60) flags |= PresentationFlags.MOBILITY_STRIDE;
         if (nutrition.fats() >= feast && state.enduranceReserveCooldown == 0) flags |= PresentationFlags.ENDURANCE_READY;
         if (state.enduranceReserveTicks > 0) flags |= PresentationFlags.ENDURANCE_ACTIVE;
-        if (nutrition.vegetables() >= feast && state.weatheredCooldown == 0) flags |= PresentationFlags.ROBUSTNESS_READY;
         if (nutrition.dairy() >= feast && state.dairyCleanseCooldown == 0) flags |= PresentationFlags.RENEWAL_READY;
         if (state.sugar > 0.01) flags |= PresentationFlags.TEMPO_ONE;
         if (state.blackout) flags |= PresentationFlags.CONTROL_BLACKOUT;
         if (state.alcohol > 0.30) flags |= PresentationFlags.CONTROL_IMPAIRED;
 
-        double[] values = {nutrition.proteins(), nutrition.grains(), nutrition.fruits(), nutrition.fats(), nutrition.vegetables(), nutrition.dairy()};
+        double[] values = {nutrition.proteins(), nutrition.grains(), nutrition.fruits(), nutrition.fats(), nutrition.spice(), nutrition.dairy()};
         int[] estimates = new int[values.length];
         AspectIdentity[] aspects = {AspectIdentity.IMPACT, AspectIdentity.WORK, AspectIdentity.MOBILITY,
                 AspectIdentity.ENDURANCE, AspectIdentity.ROBUSTNESS, AspectIdentity.RENEWAL};

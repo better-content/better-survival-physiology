@@ -98,8 +98,37 @@ if (!beverageSnapshot.isFile()) {
 }
 def beverageDependency = "bettercontent.beverage.local:better-drinking-water:${beverageHash}"
 
+// Compilation of the optional Spice integration uses a content-addressed, separately
+// source-tested provider; its JAR is NOT shipped inside physiology or copied to the pack.
+// The canonical Water runtime remains the existing legacy binary above. New Water
+// classes are an explicit compile-only snapshot, never a covert provider rollout.
+def spicyOverride = providers.gradleProperty('spicyFarmersProviderJar').orNull
+def typedWaterOverride = providers.gradleProperty('typedWaterCompileClasses').orNull
+if (spicyOverride == null || spicyOverride.isBlank())
+    throw new GradleException('Bind source-tested Spice provider via -PspicyFarmersProviderJar=...')
+if (typedWaterOverride == null || typedWaterOverride.isBlank())
+    throw new GradleException('Bind actual nonshipping Water API classes via -PtypedWaterCompileClasses=...')
+def spicyInput = file(spicyOverride)
+def typedWaterClasses = file(typedWaterOverride)
+if (!spicyInput.isFile() || !typedWaterClasses.isDirectory()
+        || !new File(typedWaterClasses, 'com/bettercontent/betterdrinkingwater/PlantDrinks.class').isFile()
+        || !new File(typedWaterClasses, 'com/bettercontent/betterdrinkingwater/api/BeverageEvents.class').isFile())
+    throw new GradleException('Missing explicit real Spice JAR or typed Water compile-only class snapshot')
+def spicyBytes = spicyInput.bytes
+def spicyHash = java.security.MessageDigest.getInstance('SHA-256').digest(spicyBytes).encodeHex().toString()
+def spicyDirectory = file(".gradle/spice-provider/${spicyHash}")
+def spicySnapshot = new File(spicyDirectory, "better-spicy-farmers-${spicyHash}.jar")
+if (!spicySnapshot.isFile()) {
+    spicyDirectory.mkdirs()
+    java.nio.file.Files.write(spicySnapshot.toPath(), spicyBytes)
+} else if (!java.util.Arrays.equals(spicySnapshot.bytes, spicyBytes)) {
+    throw new GradleException("Corrupted immutable Spice snapshot: ${spicySnapshot}")
+}
+def spicyDependency = "bettercontent.spice.local:better-spicy-farmers:${spicyHash}"
+
 repositories {
     flatDir { dirs beverageDirectory; content { includeGroup('bettercontent.beverage.local') } }
+    flatDir { dirs spicyDirectory; content { includeGroup('bettercontent.spice.local') } }
     maven { url = 'https://maven.createmod.net' }
     maven { url = 'https://maven.ithundxr.dev/mirror' }
     maven { url = 'https://maven.tterrag.com/' }
@@ -120,9 +149,21 @@ dependencies {
 
     compileOnly fg.deobf(beverageDependency)
     runtimeOnly fg.deobf(beverageDependency)
+    compileOnly files(typedWaterClasses)
+    compileOnly fg.deobf(spicyDependency)
+    // Gradle does not inherit main compileOnly into test/nativeFixture compile classpaths.
+    // Explicitly bind identical providers; only the nonshipping fixture runtime gets Spice.
+    testCompileOnly fg.deobf(spicyDependency)
+    testRuntimeOnly fg.deobf(spicyDependency)
+    nativeFixtureCompileOnly fg.deobf(spicyDependency)
+    nativeFixtureCompileOnly fg.deobf(beverageDependency)
+    nativeFixtureCompileOnly files(typedWaterClasses)
+    nativeFixtureRuntimeOnly fg.deobf(spicyDependency)
 
     // Exact core native-provider fixture dependencies; no unrelated optional integrations.
     nativeFixtureCompileOnly fg.deobf('curse.maven:curios-api-309927:6418456')
+    nativeFixtureCompileOnly fg.deobf('curse.maven:thirst-was-taken-679270:6660408')
+    nativeFixtureCompileOnly fg.deobf('curse.maven:diet-443570:4813904')
     nativeFixtureRuntimeOnly fg.deobf('curse.maven:diet-443570:4813904')
     nativeFixtureRuntimeOnly fg.deobf('com.simibubi.create:create-1.20.1:6.0.8-291:slim')
     nativeFixtureRuntimeOnly fg.deobf('net.createmod.ponder:Ponder-Forge-1.20.1:1.0.92')
@@ -159,6 +200,14 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+// Mixin's annotation processor emits the refmap only when javac actually runs. Gradle's
+// incremental no-source-changes path can remove it on a provider-classpath-only rebuild,
+// silently staging a JAR with mixins but NO refmap. Recompile the production module on
+// input changes and explicitly fingerprint the generated map as a task output.
+tasks.named('compileJava', JavaCompile).configure {
+    options.incremental = false
+    outputs.file(layout.buildDirectory.file('tmp/compileJava/compileJava-refmap.json'))
 }
 
 test {

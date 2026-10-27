@@ -17,7 +17,7 @@ public final class SystemicSalienceMod {
         ModSounds.register(FMLJavaModLoadingContext.get().getModEventBus());
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, SalienceConfig.SPEC);
         SalienceNetwork.init();
-        if (net.minecraftforge.fml.ModList.get().isLoaded("better_drinking_water"))
+        if (com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.typed())
             com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.register();
     }
 }

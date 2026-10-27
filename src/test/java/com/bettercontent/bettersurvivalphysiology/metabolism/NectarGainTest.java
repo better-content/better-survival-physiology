@@ -15,7 +15,7 @@ class NectarGainTest {
         assertEquals(.02, NectarGain.capped(.06, Map.of("fruits", .04)));
         assertEquals(.02, NectarGain.capped(.22, Map.of("dairy", .10, "grains", .04)));
         assertEquals(.01, NectarGain.capped(.01, Map.of("fruits", .04)));
-        for (String group : new String[]{"proteins", "grains", "fruits", "fats", "vegetables", "dairy"})
+        for (String group : new String[]{"proteins", "grains", "fruits", "fats", "spice", "dairy"})
             assertEquals(.02, NectarGain.capped(.34, Map.of(group, .04)), group);
     }
 
