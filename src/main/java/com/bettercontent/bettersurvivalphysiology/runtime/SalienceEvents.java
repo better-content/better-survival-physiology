@@ -189,6 +189,11 @@ public final class SalienceEvents {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.manages(event.getItem())) return;
         ItemStack stack = event.getItem();
+        if (com.bettercontent.bettersurvivalphysiology.api.CulinaryNutritionApi.resolve(player, stack).isPresent()) {
+            if (MetabolicStateStore.get(player).blackout) { event.setCanceled(true); return; }
+            if (isFruitFood(stack)) FRUIT_EFFECT_STARTS.put(player.getUUID(), snapshotEffects(player));
+            return; // Culinary completion owner performs all intake and meal feedback.
+        }
         if (stack.isEdible() || ConsumableProfiles.baseSugar(stack) > 0.0 || ConsumableProfiles.isAlcohol(stack)
                 || stack.is(net.minecraft.world.item.Items.MILK_BUCKET)) {
             MetabolicState state = MetabolicStateStore.get(player);
@@ -211,6 +216,9 @@ public final class SalienceEvents {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.manages(event.getItem())) return;
         ItemStack stack = event.getItem();
+        if (com.bettercontent.bettersurvivalphysiology.api.CulinaryNutritionApi.resolve(player, stack).isPresent()) {
+            return; // Root culinary completion dispatcher is the sole committed-serving owner.
+        }
         MetabolicState state = MetabolicStateStore.get(player);
         if (isFruitFood(stack)) {
             Map<MobEffect, EffectStamp> baseline = FRUIT_EFFECT_STARTS.remove(player.getUUID());
@@ -579,6 +587,13 @@ public final class SalienceEvents {
     private record PendingMeal(ConsumptionStart start, long dueTick) {}
     private record EffectStamp(int duration, int amplifier) {}
     private record PendingFruitEffects(Map<MobEffect, EffectStamp> before, long dueTick) {}
+
+    /** Schedules existing fruit caps only after the external owner commits a serving. */
+    public static void culinaryEffectsCompleted(ServerPlayer player) {
+        Map<MobEffect, EffectStamp> baseline = FRUIT_EFFECT_STARTS.remove(player.getUUID());
+        if (baseline != null) PENDING_FRUIT_EFFECTS.put(player.getUUID(),
+                new PendingFruitEffects(baseline, player.level().getGameTime() + 1));
+    }
 
     private static boolean isFruitFood(ItemStack stack) {
         ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());

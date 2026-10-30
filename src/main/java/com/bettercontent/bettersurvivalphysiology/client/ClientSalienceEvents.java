@@ -71,7 +71,12 @@ public final class ClientSalienceEvents {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || !minecraft.isSameThread()) return;
         Map<String, Double> gains = new HashMap<>();
-        if (com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.manages(event.getItemStack())) {
+        var culinary = com.bettercontent.bettersurvivalphysiology.api.CulinaryNutritionApi.resolve(minecraft.player, event.getItemStack());
+        if (culinary.isPresent()) {
+            gains.putAll(culinary.get().adjusted());
+            double units = SpiceBridge.resolveUnits(minecraft.player, event.getItemStack());
+            if (units > 0) gains.put("spice", SpiceBridge.dietGain(units));
+        } else if (com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.manages(event.getItemStack())) {
             gains.putAll(com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.plantGains(event.getItemStack()));
         } else {
             try {
@@ -79,8 +84,12 @@ public final class ClientSalienceEvents {
                         .forEach((group, gain) -> gains.put(group.getName(), gain.doubleValue()));
             } catch (RuntimeException ignored) { return; }
         }
-        var entries = FoodNutrients.entries(gains, ConsumableProfiles.servingSugar(event.getItemStack(), gains),
-                ConsumableProfiles.alcohol(event.getItemStack()), event.getItemStack().is(net.minecraft.world.item.Items.MILK_BUCKET));
+        var entries = FoodNutrients.entries(gains,
+                culinary.map(com.bettercontent.bettersurvivalphysiology.api.CulinaryNutritionApi.Serving::sugar)
+                        .orElseGet(() -> ConsumableProfiles.servingSugar(event.getItemStack(), gains)),
+                culinary.map(com.bettercontent.bettersurvivalphysiology.api.CulinaryNutritionApi.Serving::alcohol)
+                        .orElseGet(() -> ConsumableProfiles.alcohol(event.getItemStack())),
+                culinary.isEmpty() && event.getItemStack().is(net.minecraft.world.item.Items.MILK_BUCKET));
         if (entries.isEmpty()) return;
         MutableComponent line = Component.empty();
         for (int index = 0; index < entries.size(); index++) {
