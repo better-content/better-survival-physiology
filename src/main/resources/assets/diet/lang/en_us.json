@@ -1,10 +1,10 @@
 {
-  "groups.diet.proteins.name": "Flesh",
-  "groups.diet.sugars.name": "Nectar",
-  "groups.diet.grains.name": "Grain",
+  "groups.diet.proteins.name": "Protein",
+  "groups.diet.sugars.name": "Sugar",
+  "groups.diet.grains.name": "Grains",
   "groups.diet.fruits.name": "Fruit",
-  "groups.diet.fats.name": "Tallow",
+  "groups.diet.vegetables.name": "Vegetables",
   "groups.diet.spice.name": "Spice",
-  "groups.diet.dairy.name": "Cream",
-  "groups.diet.alcohol.name": "Booze"
+  "groups.diet.dairy.name": "Dairy",
+  "groups.diet.alcohol.name": "Alcohol"
 }

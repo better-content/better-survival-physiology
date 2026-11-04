@@ -1,7 +1,7 @@
 {
   "icon": "minecraft:carrot",
-  "color": "#AF6A2F",
-  "order": 5,
+  "color": "#52606A",
+  "order": 4,
   "default_value": 0.0,
   "gain_multiplier": 1.0,
   "decay_multiplier": 1.0,

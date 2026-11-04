@@ -5,14 +5,14 @@ import java.util.Comparator;
 import java.util.Locale;
 
 public enum AspectIdentity {
-    IMPACT(0, "proteins", "✦", "Flesh", "meat, eggs, legumes", 0xFF4055),
-    TEMPO(1, "sugar", "»", "Nectar", "fruit, honey, sweets", 0x00A985),
-    WORK(2, "grains", "⚒", "Grain", "grain, bread, porridge", 0xF0E2C5),
+    IMPACT(0, "proteins", "✦", "Protein", "meat, eggs, legumes", 0xFF4055),
+    TEMPO(1, "sugars", "»", "Sugar", "fruit, honey, sweets", 0x00A985),
+    WORK(2, "grains", "⚒", "Grains", "grain, bread, porridge", 0xF0E2C5),
     MOBILITY(3, "fruits", "➜", "Fruit", "fruit, berries", 0xE0B01F),
-    ENDURANCE(4, "fats", "∞", "Tallow", "meat fat, oils, nuts, dairy", 0x52606A),
+    ENDURANCE(4, "vegetables", "∞", "Vegetables", "vegetables, greens, roots", 0x52606A),
     ROBUSTNESS(5, "spice", "◆", "Spice", "spices, seasoned foods", 0xD85C32),
-    RENEWAL(6, "dairy", "✚", "Cream", "milk, cheese, cultured dairy", 0x6CCAF0),
-    CONTROL(7, "alcohol", "⊕", "Booze", "fermented drinks", 0x8E5BB7);
+    RENEWAL(6, "dairy", "✚", "Dairy", "milk, cheese, cultured dairy", 0x6CCAF0),
+    CONTROL(7, "alcohol", "⊕", "Alcohol", "fermented drinks", 0x8E5BB7);
 
     public final int icon;
     public final String representative;
@@ -32,8 +32,7 @@ public enum AspectIdentity {
 
     public static AspectIdentity fromGroupName(String name) {
         String normalized = (name.contains(":") ? name.substring(name.indexOf(':') + 1) : name).toLowerCase(Locale.ROOT);
-        String identity = normalized.equals("sugars") ? "sugar" : normalized; // Diet's native group is plural.
-        return Arrays.stream(values()).filter(value -> value.representative.equals(identity)).findFirst().orElse(null);
+        return Arrays.stream(values()).filter(value -> value.representative.equals(normalized)).findFirst().orElse(null);
     }
 
     public static Comparator<AspectIdentity> displayOrder() { return Comparator.comparingInt(value -> value.icon); }

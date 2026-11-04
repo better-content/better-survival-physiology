@@ -17,7 +17,7 @@ class SystemicSalienceContractTest {
         Path clientRoot = Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/client");
         String opening = Files.readString(clientRoot.resolve("DietScreenEvents.java"));
 
-        assertTrue(Files.exists(clientRoot.resolve("SystemicDietScreen.java")));
+        assertFalse(Files.exists(clientRoot.resolve("SystemicDietScreen.java")), "Journal is the sole nutrition screen");
         assertTrue(opening.contains("ScreenEvent.Opening"));
         assertTrue(opening.contains("setNewScreen"));
         assertFalse(Files.exists(clientRoot.resolve("DietBenefitsOverlay.java")));

@@ -80,7 +80,7 @@ public final class BeverageCompat {
         } else if (stack.is(Items.MILK_BUCKET)) {
             // Explicit physiology award, not an additional native Diet award.
             gains.putDouble("dairy", .06);
-            gains.putDouble("fats", .06);
+            // Milk has no Vegetable award.
         } else {
             var resolved = ConsumableProfiles.dietGains(event.player(), stack);
             resolved.ifPresent(serving -> {
@@ -140,8 +140,11 @@ public final class BeverageCompat {
             for (NutritionSnapshot.Group group : NutritionSnapshot.Group.values()) {
                 double amount = group == NutritionSnapshot.Group.SPICE ? SpiceBridge.dietGain(portionUnits)
                         : BeverageNutrition.award(gains.getDouble(group.id), event.from(), event.to());
-                if (amount > 0.0 && diet.getValues().containsKey(group.id))
+                if (amount > 0.0) {
+                    if (!diet.getValues().containsKey(group.id))
+                        throw new IllegalStateException("Diet suite has no beverage nutrient " + group.id);
                     diet.setValue(group.id, (float) Math.min(1.0, diet.getValue(group.id) + amount));
+                }
             }
             if (event.to() == 1.0 && !gains.isEmpty()) {
                 var id = net.minecraft.resources.ResourceLocation.tryParse(nutrition.getString(ITEM));

@@ -90,15 +90,26 @@ public final class ClientSalienceEvents {
                 culinary.map(com.bettercontent.bettersurvivalphysiology.api.CulinaryNutritionApi.Serving::alcohol)
                         .orElseGet(() -> ConsumableProfiles.alcohol(event.getItemStack())),
                 culinary.isEmpty() && event.getItemStack().is(net.minecraft.world.item.Items.MILK_BUCKET));
-        if (entries.isEmpty()) return;
+        if (entries.isEmpty() && gains.entrySet().stream().noneMatch(entry ->
+                AspectIdentity.fromGroupName(entry.getKey()) == null && entry.getValue() != null && entry.getValue() > 0)) return;
         MutableComponent line = Component.empty();
         for (int index = 0; index < entries.size(); index++) {
             var entry = entries.get(index);
             AspectIdentity identity = entry.aspect();
             if (index > 0) line.append(Component.literal(" · ").withStyle(style -> style.withColor(0x777777)));
             line.append(Component.literal(identity.badge()).withStyle(style -> style.withFont(ASPECT_FONT)))
-                    .append(Component.literal(" " + identity.displayName).withStyle(style -> style.withColor(identity.color)))
+                    .append(Component.literal(" ")).append(Component.translatable("groups.diet." + identity.representative + ".name")
+                            .withStyle(style -> style.withColor(identity.color)))
                     .append(Component.literal(" " + entry.percentage()).withStyle(style -> style.withColor(0xD8D5CE)));
+        }
+        for (var gain : gains.entrySet()) {
+            if (AspectIdentity.fromGroupName(gain.getKey()) != null || gain.getValue() == null
+                    || !Double.isFinite(gain.getValue()) || gain.getValue() <= 0) continue;
+            if (!line.getSiblings().isEmpty()) line.append(Component.literal(" · ").withStyle(style -> style.withColor(0x777777)));
+            double percent = gain.getValue() * 100;
+            String shown = percent < .1 ? "<0.1" : String.format(java.util.Locale.ROOT, "%.1f", percent);
+            line.append(Component.translatable("groups.diet." + gain.getKey() + ".name"))
+                    .append(Component.literal(" +" + shown + "% (unsupported effect)"));
         }
         // The oversized badge font extends above its row; reserve a full line of clearance.
         event.getToolTip().add(Component.empty());

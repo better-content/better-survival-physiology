@@ -26,10 +26,10 @@ public final class GameplayHooks {
     private static float costMultiplier(ServerPlayer player) {
         MetabolicState state = MetabolicStateStore.get(player);
         NutritionSnapshot nutrition = DietBridge.snapshot(player);
-        double fats = nutrition.actual(NutritionSnapshot.Group.FATS);
-        double savings = NutritionEffects.resourceSavings(fats, state.sugar);
+        double vegetables = nutrition.actual(NutritionSnapshot.Group.VEGETABLES);
+        double savings = NutritionEffects.resourceSavings(vegetables, state.sugar);
         double ordinary = state.enduranceReserveTicks > 0 ? 0.0 : 1.0 - savings;
-        // Nectar is a separate surcharge: Tallow and its emergency reserve cannot erase it.
+        // Sugar is a separate surcharge: Vegetable nutrition and its emergency reserve cannot erase it.
         return (float) (ordinary + MetabolicMath.sugarDrain(state.sugar) - 1.0
                 + 2.0 * MetabolicMath.alcoholImpairment(state.alcohol, state.sugar));
     }

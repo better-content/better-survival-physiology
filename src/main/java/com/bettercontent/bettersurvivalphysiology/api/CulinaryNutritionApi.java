@@ -13,7 +13,7 @@ import java.util.*;
 public final class CulinaryNutritionApi {
     public record Serving(Map<String, Double> unscaled, Map<String, Double> adjusted,
                           double sugar, double alcohol) {
-        private static final Set<String> ORDINARY = Set.of("proteins", "grains", "fruits", "fats", "dairy", "vegetables");
+        private static final Set<String> ORDINARY = Set.of("proteins", "grains", "fruits", "vegetables", "dairy");
         public Serving {
             unscaled = checked(unscaled);
             adjusted = checked(adjusted);
@@ -56,18 +56,21 @@ public final class CulinaryNutritionApi {
         var before = DietBridge.snapshot(player);
         var state = MetabolicStateStore.get(player);
         double sugarBefore = state.sugar, alcoholBefore = state.alcohol;
-        DietBridge.tracker(player).ifPresent(diet -> {
-            serving.adjusted().forEach((group, gain) -> {
-                if (diet.getValues().containsKey(group))
-                    diet.setValue(group, (float) Math.min(1, diet.getValue(group) + gain));
-            });
-            // Spice is resolved separately, never quality-scaled or counted as ordinary nutrition.
-            double units = com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge.resolveUnits(player, stack);
-            if (units > 0 && diet.getValues().containsKey("spice"))
-                diet.setValue("spice", (float) Math.min(1, diet.getValue("spice")
-                        + com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge.dietGain(units)));
-            diet.sync();
-        });
+        var diet = DietBridge.tracker(player).orElseThrow(() ->
+                new IllegalStateException("Cannot commit paid culinary nutrition: Diet tracker unavailable"));
+        var available = diet.getValues().keySet();
+        if (!available.containsAll(serving.adjusted().keySet()))
+            throw new IllegalStateException("Diet suite has no culinary nutrients " + serving.adjusted().keySet());
+        // Validate the separately resolved paid Spice dose before committing any of the serving.
+        double units = com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge.resolveUnits(player, stack);
+        if (units > 0 && !available.contains("spice"))
+            throw new IllegalStateException("Cannot commit paid culinary Spice: Diet suite has no spice group");
+        serving.adjusted().forEach((group, gain) ->
+                diet.setValue(group, (float) Math.min(1, diet.getValue(group) + gain)));
+        if (units > 0)
+            diet.setValue("spice", (float) Math.min(1, diet.getValue("spice")
+                    + com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge.dietGain(units)));
+        diet.sync();
         state.addSugar(serving.sugar());
         state.addAlcohol(serving.alcohol());
         if (state.blackout) {

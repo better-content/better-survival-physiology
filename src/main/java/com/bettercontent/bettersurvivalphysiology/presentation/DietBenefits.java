@@ -19,7 +19,7 @@ public final class DietBenefits {
             case TEMPO -> state.sugar();
             case WORK -> state.grains();
             case MOBILITY -> state.fruits();
-            case ENDURANCE -> state.fats();
+            case ENDURANCE -> state.vegetables();
             case ROBUSTNESS -> state.spice();
             case RENEWAL -> state.dairy();
             case CONTROL -> state.alcohol();
@@ -56,7 +56,7 @@ public final class DietBenefits {
             case WORK -> "Correct-tool mining scales from 0 to +100%; work sequence at 40%, grace at 60%, burst at 80%";
             case MOBILITY -> "Movement/swimming scale from 0 to +25%; safer falls at 20%, sprint stride at 40%, leap at 80%";
             case ENDURANCE -> "All resource costs fall from 0 to -50%; emergency reserve at 80%";
-            case ROBUSTNESS -> String.format("Right-tool mining up to +%.0f%%; move/swim up to +%.0f%%. Nectar stays within caps.",
+            case ROBUSTNESS -> String.format("Right-tool mining up to +%.0f%%; move/swim up to +%.0f%%. Sugar stays within caps.",
                     100 * SpiceBridge.miningCap(), 100 * SpiceBridge.movementCap());
             case RENEWAL -> "Harmful-effect expiry scales from 1× to 2×; meal recovery at 40%, cleanse at 80%";
             case TEMPO -> "Amplifies nutrients and " + AspectIdentity.CONTROL.displayName
@@ -102,7 +102,7 @@ public final class DietBenefits {
             }
             default -> throw new IllegalArgumentException("Not an ordinary nutrient");
         }
-        result.add(new GuideTier("Nectar", -1, "Nectar boosts timing, not unlocks. Spice stays within its caps; resource savings cap at 85%.", true));
+        result.add(new GuideTier("Sugar", -1, "Sugar boosts timing, not unlocks. Spice stays within its caps; resource savings cap at 85%.", true));
         return List.copyOf(result);
     }
 

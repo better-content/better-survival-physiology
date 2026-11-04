@@ -31,7 +31,7 @@ final class NutritionPresentationTest {
         assertEquals(AspectIdentity.RENEWAL, AspectIdentity.fromGroupName("Dairy"));
         assertEquals(AspectIdentity.ROBUSTNESS, AspectIdentity.fromGroupName("diet:spice"));
         assertNull(AspectIdentity.fromGroupName("diet:earth"), "Legacy Earth must not alias or migrate into Spice");
-        assertNull(AspectIdentity.fromGroupName("vegetables"), "Unrelated former crop groups must not become Spice");
+        assertEquals(AspectIdentity.ENDURANCE, AspectIdentity.fromGroupName("vegetables"), "Diet Vegetables owns the resource-savings aspect");
         assertEquals("Spice", AspectIdentity.ROBUSTNESS.displayName);
         assertArrayEquals(new int[]{0xFF4055, 0x00A985, 0xF0E2C5, 0xE0B01F, 0x52606A, 0xD85C32, 0x6CCAF0, 0x8E5BB7},
                 java.util.Arrays.stream(AspectIdentity.values()).mapToInt(aspect -> aspect.color).toArray());

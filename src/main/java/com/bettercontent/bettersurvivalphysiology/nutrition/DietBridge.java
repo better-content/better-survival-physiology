@@ -21,7 +21,7 @@ public final class DietBridge {
     public static void awardMilk(Player player) {
         tracker(player).ifPresent(diet -> {
             boolean changed = false;
-            for (String group : new String[]{"dairy", "fats"}) {
+            for (String group : new String[]{"dairy"}) {
                 if (!diet.getValues().containsKey(group)) continue;
                 diet.setValue(group, Math.min(1.0f, diet.getValue(group) + 0.06f));
                 changed = true;
@@ -67,7 +67,7 @@ public final class DietBridge {
                 tracker.getValue(NutritionSnapshot.Group.PROTEINS.id),
                 tracker.getValue(NutritionSnapshot.Group.GRAINS.id),
                 tracker.getValue(NutritionSnapshot.Group.FRUITS.id),
-                tracker.getValue(NutritionSnapshot.Group.FATS.id),
+                tracker.getValue(NutritionSnapshot.Group.VEGETABLES.id),
                 tracker.getValue(NutritionSnapshot.Group.SPICE.id),
                 tracker.getValue(NutritionSnapshot.Group.DAIRY.id)
         );

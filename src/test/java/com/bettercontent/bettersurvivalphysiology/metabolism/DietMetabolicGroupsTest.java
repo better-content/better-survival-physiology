@@ -20,12 +20,12 @@ class DietMetabolicGroupsTest {
         var suite = json("/data/diet/diet/suites/builtin.json");
         Set<String> groups = new HashSet<>();
         suite.getAsJsonArray("groups").forEach(group -> groups.add(group.getAsString()));
-        assertEquals(Set.of("proteins", "grains", "fruits", "fats", "spice", "dairy", "sugars", "alcohol"), groups);
+        assertEquals(Set.of("proteins", "grains", "fruits", "vegetables", "spice", "dairy", "sugars", "alcohol"), groups);
         assertTrue(suite.getAsJsonArray("effects").isEmpty());
         assertEquals(AspectIdentity.TEMPO, AspectIdentity.fromGroupName("diet:sugars"));
         assertEquals(AspectIdentity.CONTROL, AspectIdentity.fromGroupName("diet:alcohol"));
         for (AspectIdentity aspect : AspectIdentity.values()) {
-            String group = aspect == AspectIdentity.TEMPO ? "sugars" : aspect.representative;
+            String group = aspect.representative;
             var definition = json("/data/diet/diet/groups/" + group + ".json");
             assertEquals(aspect.icon, definition.get("order").getAsInt());
             assertEquals(String.format("#%06X", aspect.color), definition.get("color").getAsString());

@@ -30,7 +30,7 @@ public final class FoodNutrients {
         gains.put(AspectIdentity.CONTROL, alcohol);
         if (milk) {
             gains.put(AspectIdentity.RENEWAL, 0.06);
-            gains.put(AspectIdentity.ENDURANCE, 0.06);
+            // Milk is a Dairy award, not Vegetable nutrition.
         }
         List<Entry> entries = new ArrayList<>();
         for (AspectIdentity identity : AspectIdentity.values()) {

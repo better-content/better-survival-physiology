@@ -16,11 +16,11 @@ public final class SpiceBehaviorPureTest {
         var n = new NutritionSnapshot(.1f, .2f, .3f, .4f, .5f, .6f);
         near(n.actual(NutritionSnapshot.Group.SPICE), .5);
         check(NutritionSnapshot.Group.SPICE.id.equals("spice"), "Own Spice persistence identity");
-        for (var group : NutritionSnapshot.Group.values()) check(!group.id.equals("vegetables"), "Earth not remapped");
+        check(NutritionSnapshot.Group.VEGETABLES.id.equals("vegetables"), "Diet Vegetables is a distinct ordinary group from Spice");
         near(NectarGain.capped(.5, Map.of("spice", .2)), .1);
-        near(NectarGain.capped(.5, Map.of("vegetables", .01, "spice", .2)), .1);
+        near(NectarGain.capped(.5, Map.of("vegetables", .01, "spice", .2)), .005);
         near(NectarGain.capped(.5, Map.of("grains", .04, "spice", .2)), .02);
-        near(NectarGain.capped(.5, Map.of("vegetables", .01)), .5);
+        near(NectarGain.capped(.5, Map.of("vegetables", .01)), .005);
         for (int i = 0; i <= 100; i++) {
             double level = i / 100.0;
             for (double amp : new double[]{1, 1.5, 3, 10}) {

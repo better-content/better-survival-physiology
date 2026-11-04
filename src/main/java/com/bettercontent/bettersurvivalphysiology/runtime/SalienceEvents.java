@@ -228,7 +228,7 @@ public final class SalienceEvents {
         double sugar = ConsumableProfiles.servingSugar(player, stack);
         if (sugar > 0.0) {
             state.addSugar(sugar);
-            activation(player, AspectIdentity.TEMPO, "Nectar ×" + String.format("%.1f", MetabolicMath.amplification(state.sugar)));
+            activation(player, AspectIdentity.TEMPO, "Sugar ×" + String.format("%.1f", MetabolicMath.amplification(state.sugar)));
         }
         double alcohol = ConsumableProfiles.alcohol(stack);
         if (alcohol > 0.0) {
@@ -377,7 +377,7 @@ public final class SalienceEvents {
                 AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_spice_move");
         updateAttribute(player, "forge:swim_speed", SPICE_SWIM, spiceMovement,
                 AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_spice_swim");
-        // Earth no longer exists: no temperature correction or Weathered Guard.
+        // Vegetables own the existing resource-savings benefit, not a temperature modifier.
         double impairment = MetabolicMath.alcoholImpairment(state.alcohol, state.sugar);
         updateAttribute(player, "minecraft:generic.movement_speed", ALCOHOL_MOVE,
                 -.75 * impairment, AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_alcohol_move");
@@ -401,7 +401,7 @@ public final class SalienceEvents {
                 }
             }
         }
-        // Fractional carry makes even 1% Cream work without rounding up to a full tick.
+        // Fractional carry makes even 1% Dairy work without rounding up to a full tick.
         int extraTicks = state.renewalExtraTicks(dairy);
         if (extraTicks == 0) return;
         for (MobEffectInstance effect : player.getActiveEffects()) {
@@ -412,7 +412,7 @@ public final class SalienceEvents {
     }
 
     private static void applyEnduranceReserve(ServerPlayer player, MetabolicState state, NutritionSnapshot nutrition) {
-        if (nutrition.actual(NutritionSnapshot.Group.FATS) < SalienceConfig.FOURTH || state.enduranceReserveCooldown > 0) return;
+        if (nutrition.actual(NutritionSnapshot.Group.VEGETABLES) < SalienceConfig.FOURTH || state.enduranceReserveCooldown > 0) return;
         if (player.getFoodData().getFoodLevel() <= 2 || ThirstCompat.isLow(player) || EpicFightCompat.isStaminaBelow(player, 0.10)) {
             state.enduranceReserveTicks = (int) (10 * 20 * MetabolicMath.amplification(state.sugar));
             state.enduranceReserveCooldown = 2 * 60 * 20;
@@ -501,7 +501,7 @@ public final class SalienceEvents {
             if (previous >= NutritionTier.FIRST.ordinal() && current == NutritionTier.BUILDING.ordinal()
                     && state.sugar >= .15) {
                 metabolicDiscovery(player, com.bettercontent.bettersurvivalphysiology.api.event.MetabolicDiscoveryEvent.Kind.SUGAR_CRASH,
-                        "Nectar drained " + NUTRIENT_ASPECTS[index].displayName + " below 20%");
+                        "Sugar drained " + NUTRIENT_ASPECTS[index].displayName + " below 20%");
                 action(player, AspectIdentity.TEMPO, "Nutrition drained");
             }
             if (previous < NutritionTier.SECOND.ordinal() || current >= previous) continue;

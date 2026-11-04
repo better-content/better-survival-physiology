@@ -1,7 +1,7 @@
 package com.bettercontent.bettersurvivalphysiology.nutrition;
 
 
-public record NutritionSnapshot(float proteins, float grains, float fruits, float fats, float spice, float dairy) {
+public record NutritionSnapshot(float proteins, float grains, float fruits, float vegetables, float spice, float dairy) {
     public static final NutritionSnapshot EMPTY = new NutritionSnapshot(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
     public float actual(Group group) {
@@ -9,7 +9,7 @@ public record NutritionSnapshot(float proteins, float grains, float fruits, floa
             case FRUITS -> fruits;
             case GRAINS -> grains;
             case PROTEINS -> proteins;
-            case FATS -> fats;
+            case VEGETABLES -> vegetables;
             case SPICE -> spice;
             case DAIRY -> dairy;
         };
@@ -19,7 +19,7 @@ public record NutritionSnapshot(float proteins, float grains, float fruits, floa
         PROTEINS("proteins"),
         GRAINS("grains"),
         FRUITS("fruits"),
-        FATS("fats"),
+        VEGETABLES("vegetables"),
         SPICE("spice"),
         DAIRY("dairy");
 

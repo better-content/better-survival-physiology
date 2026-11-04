@@ -17,7 +17,7 @@ class FoodNutrientsTest {
     @Test
     void nativeGainsUsePackNamesAndStableHorizontalOrder() {
         var entries = FoodNutrients.entries(Map.of("diet:proteins", .025, "fruits", .06, "grains", .1), .06, 0, false);
-        assertEquals(List.of("Flesh", "Nectar", "Grain", "Fruit"),
+        assertEquals(List.of("Protein", "Sugar", "Grains", "Fruit"),
                 entries.stream().map(entry -> entry.aspect().displayName).toList());
         assertEquals(List.of("+2.5%", "+6%", "+10%", "+6%"),
                 entries.stream().map(FoodNutrients.Entry::percentage).toList());
@@ -25,8 +25,8 @@ class FoodNutrientsTest {
 
     @Test
     void allPackNamesMatchDietLabelsAndKeepNativeGroupIdentities() throws Exception {
-        var labels = List.of("Flesh", "Nectar", "Grain", "Fruit", "Tallow", "Spice", "Cream", "Booze");
-        var groups = List.of("proteins", "sugars", "grains", "fruits", "fats", "spice", "dairy", "alcohol");
+        var labels = List.of("Protein", "Sugar", "Grains", "Fruit", "Vegetables", "Spice", "Dairy", "Alcohol");
+        var groups = List.of("proteins", "sugars", "grains", "fruits", "vegetables", "spice", "dairy", "alcohol");
         var aspects = AspectIdentity.values();
         var language = JsonParser.parseString(Files.readString(
                 Path.of("src/main/resources/assets/diet/lang/en_us.json"))).getAsJsonObject();
@@ -35,7 +35,7 @@ class FoodNutrientsTest {
             var aspect = aspects[index];
             String group = groups.get(index);
             assertEquals(index, aspect.icon);
-            assertEquals(group.equals("sugars") ? "sugar" : group, aspect.representative);
+            assertEquals(group, aspect.representative);
             assertSame(aspect, AspectIdentity.fromGroupName(group));
             assertSame(aspect, AspectIdentity.fromGroupName("diet:" + group));
             assertEquals(labels.get(index), language.get("groups.diet." + group + ".name").getAsString());
@@ -45,7 +45,7 @@ class FoodNutrientsTest {
     @Test
     void allEightServingGainsKeepTheirValuesAndOrder() {
         var entries = FoodNutrients.entries(Map.of("proteins", .01, "grains", .03, "fruits", .04,
-                "fats", .05, "spice", .06, "dairy", .07), .02, .08, false);
+                "vegetables", .05, "spice", .06, "dairy", .07), .02, .08, false);
         assertEquals(List.of(AspectIdentity.values()), entries.stream().map(FoodNutrients.Entry::aspect).toList());
         assertEquals(List.of("+1%", "+2%", "+3%", "+4%", "+5%", "+6%", "+7%", "+8%"),
                 entries.stream().map(FoodNutrients.Entry::percentage).toList());
@@ -61,9 +61,9 @@ class FoodNutrientsTest {
     @Test
     void milkMatchesTheNativeConsumptionAward() {
         var entries = FoodNutrients.entries(Map.of(), 0, 0, true);
-        assertEquals(List.of(AspectIdentity.ENDURANCE, AspectIdentity.RENEWAL),
+        assertEquals(List.of(AspectIdentity.RENEWAL),
                 entries.stream().map(FoodNutrients.Entry::aspect).toList());
-        assertEquals(List.of("+6%", "+6%"), entries.stream().map(FoodNutrients.Entry::percentage).toList());
+        assertEquals(List.of("+6%"), entries.stream().map(FoodNutrients.Entry::percentage).toList());
     }
 
     @Test
@@ -113,7 +113,7 @@ class FoodNutrientsTest {
         assertTrue(client.contains("MutableComponent line = Component.empty();"));
         String paddedRow = "event.getToolTip().add(Component.empty());\n        event.getToolTip().add(line);";
         assertTrue(client.contains(paddedRow), "Nutrition badges need a blank line above their oversized icons");
-        assertTrue(client.indexOf("if (entries.isEmpty()) return;") < client.indexOf(paddedRow),
+        assertTrue(client.indexOf("if (entries.isEmpty() && gains.entrySet().stream().noneMatch") < client.indexOf(paddedRow),
                 "Tooltips without nutrition entries must not gain a blank line");
         assertFalse(client.contains("identity.glyph"));
         assertFalse(client.contains("preparedPromise"));

@@ -7,11 +7,11 @@
   "mixins": [
     "MobEffectInstanceAccessor",
     "DietDecayMixin",
+    "DietApplyGuardMixin",
     "PlayerExhaustionMixin",
     "ThirstExhaustionMixin"
   ],
   "client": [
-    "DietScreenAccessor",
     "DietFoodTooltipMixin"
   ],
   "injectors": {
