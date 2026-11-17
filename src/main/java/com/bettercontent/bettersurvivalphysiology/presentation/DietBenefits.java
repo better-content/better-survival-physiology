@@ -53,8 +53,8 @@ public final class DietBenefits {
     public static String effect(AspectIdentity aspect, NutritionTier tier) {
         return switch (aspect) {
             case IMPACT -> "Melee damage scales from 0 to +40%; charged strike at 40%, cleave at 80%";
-            case WORK -> "Correct-tool mining scales from 0 to +100%; work sequence at 40%, grace at 60%, burst at 80%";
-            case MOBILITY -> "Movement/swimming scale from 0 to +25%; safer falls at 20%, sprint stride at 40%, leap at 80%";
+            case WORK -> "Correct-tool mining scales continuously from 0 to +100%; no extra speed stacks";
+            case MOBILITY -> "Movement/swimming scale from 0 to +25%; safer falls at 20%, leap at 80%";
             case ENDURANCE -> "All resource costs fall from 0 to -50%; emergency reserve at 80%";
             case ROBUSTNESS -> String.format("Right-tool mining up to +%.0f%%; move/swim up to +%.0f%%. Sugar stays within caps.",
                     100 * SpiceBridge.miningCap(), 100 * SpiceBridge.movementCap());
@@ -80,14 +80,9 @@ public final class DietBenefits {
                 perk(result, state, aspect, .40f, "No attacks for 4s: charged hit +50% damage. Cooldown 12s.");
                 perk(result, state, aspect, .80f, "Charged hit: 35% splash to up to 2 nearby foes.");
             }
-            case WORK -> {
-                perk(result, state, aspect, .40f, "Right-tool breaks: +10% mining speed each, up to +50%.");
-                perk(result, state, aspect, .60f, "Mining streak lasts 5s between breaks (was 3s).");
-                perk(result, state, aspect, .80f, "5 valid breaks: +100% mining speed for 5s.");
-            }
+            case WORK -> { /* Continuous correct-tool bonus only. */ }
             case MOBILITY -> {
                 perk(result, state, aspect, .20f, "Fall damage -35% × " + aspect.displayName + " level");
-                perk(result, state, aspect, .40f, "Sprint 3s: +12% extra move/swim speed.");
                 perk(result, state, aspect, .80f, "Sprint-jump: forward leap. Cooldown 12s.");
             }
             case ENDURANCE -> perk(result, state, aspect, .80f, "Low food/thirst/stamina: 10s reserve. Cooldown 2m. Loads still cost extra.");
@@ -108,11 +103,9 @@ public final class DietBenefits {
 
     /** Floor of the highest active behavioural unlock, not a fictitious shared tier. */
     public static double activePerkFloor(AspectIdentity aspect, double value) {
-        if (aspect == AspectIdentity.ROBUSTNESS) return 0; // Spice has no Grain/Fruit perk unlocks.
+        if (aspect == AspectIdentity.ROBUSTNESS || aspect == AspectIdentity.WORK) return 0;
         if (value >= .80) return .80;
-        if (aspect == AspectIdentity.WORK && value >= .60) return .60;
-        if ((aspect == AspectIdentity.IMPACT || aspect == AspectIdentity.WORK
-                || aspect == AspectIdentity.MOBILITY || aspect == AspectIdentity.RENEWAL) && value >= .40) return .40;
+        if ((aspect == AspectIdentity.IMPACT || aspect == AspectIdentity.RENEWAL) && value >= .40) return .40;
         if (aspect == AspectIdentity.MOBILITY && value >= .20) return .20;
         return 0;
     }

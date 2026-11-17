@@ -6,6 +6,7 @@ import com.bettercontent.bettersurvivalphysiology.nutrition.NutritionSnapshot;
 import com.bettercontent.bettersurvivalphysiology.runtime.HeavyBlow;
 import net.minecraft.server.level.ServerPlayer;
 
+// workSequence is a reserved wire slot, always zero; no work-sequence gameplay state remains.
 public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSeconds,
                                    int sugarSeconds, int alcoholSeconds,
                                    float ordinary, float prepared, float feast) {
@@ -17,7 +18,6 @@ public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSe
         if (HeavyBlow.ready(nutrition.proteins(), prepared, state.heavyBlowCooldown,
                 player.level().getGameTime(), state.lastAttackTick,
                 player.getAttackStrengthScale(0.5f), state.blackout)) flags |= PresentationFlags.IMPACT_READY;
-        if (nutrition.fruits() >= SalienceConfig.SECOND && state.sprintTicks >= 60) flags |= PresentationFlags.MOBILITY_STRIDE;
         if (nutrition.vegetables() >= feast && state.enduranceReserveCooldown == 0) flags |= PresentationFlags.ENDURANCE_READY;
         if (state.enduranceReserveTicks > 0) flags |= PresentationFlags.ENDURANCE_ACTIVE;
         if (nutrition.dairy() >= feast && state.dairyCleanseCooldown == 0) flags |= PresentationFlags.RENEWAL_READY;
@@ -33,7 +33,7 @@ public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSe
             double floor = DietBenefits.activePerkFloor(aspects[index], values[index]);
             estimates[index] = floor > 0 ? NutritionEstimates.nutrientSeconds(values[index], floor, state.sugar) : -1;
         }
-        return new PresentationSnapshot(flags, state.workSequence, estimates,
+        return new PresentationSnapshot(flags, 0, estimates,
                 NutritionEstimates.sugarSeconds(state.sugar),
                 NutritionEstimates.alcoholSeconds(state.alcohol, state.sugar), (float) ordinary, (float) prepared, (float) feast);
     }

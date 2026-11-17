@@ -28,6 +28,15 @@ public final class ModSounds {
     private ModSounds() {}
 
     public static void register(IEventBus bus) { SOUNDS.register(bus); }
-    public static SoundEvent get(AspectIdentity aspect) { return ASPECTS.get(aspect).get(); }
-    public static SoundEvent brokenTempo() { return BROKEN_TEMPO.get(); }
+    public static SoundEvent get(AspectIdentity group) {
+        AspectIdentity voice = switch (group.aspect) {
+            case POWER -> AspectIdentity.IMPACT;
+            case MOTION -> AspectIdentity.MOBILITY;
+            case ENDURANCE -> AspectIdentity.ENDURANCE;
+            case RENEWAL -> AspectIdentity.RENEWAL;
+            case CONTROL -> AspectIdentity.CONTROL;
+        };
+        return ASPECTS.get(voice).get();
+    }
+    public static SoundEvent brokenTempo() { return get(AspectIdentity.TEMPO); }
 }

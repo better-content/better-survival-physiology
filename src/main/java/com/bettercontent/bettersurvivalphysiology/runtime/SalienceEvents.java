@@ -100,9 +100,6 @@ public final class SalienceEvents {
         NutritionSnapshot nutrition = DietBridge.snapshot(player);
 
         state.sprintTicks = player.isSprinting() ? state.sprintTicks + 1 : 0;
-        int workGrace = (int) ((nutrition.grains() >= SalienceConfig.THIRD ? 100 : 60)
-                * MetabolicMath.amplification(state.sugar));
-        if (state.workSequence > 0 && state.lastBreakTick < player.level().getGameTime() - workGrace) state.workSequence = 0;
         if (nutrition.fruits() >= SalienceConfig.FOURTH && state.orchardBurstCooldown == 0
                 && state.wasOnGround && !player.onGround()
                 && state.sprintTicks >= 60 / MetabolicMath.amplification(state.sugar)
@@ -150,8 +147,6 @@ public final class SalienceEvents {
         double grains = DietBridge.snapshot(player).actual(NutritionSnapshot.Group.GRAINS);
         boolean correctTool = player.hasCorrectToolForDrops(event.getState());
         double bonus = correctTool ? NutritionEffects.miningSpeed(grains, state.sugar) : 0.0;
-        if (correctTool && grains >= SalienceConfig.SECOND) bonus += 0.10 * state.workSequence * MetabolicMath.amplification(state.sugar);
-        if (correctTool && grains >= SalienceConfig.FOURTH && state.workBurstTicks > 0) bonus += MetabolicMath.amplification(state.sugar);
         event.setNewSpeed((float) (event.getNewSpeed() * Math.max(0.05,
                 1.0 - 0.90 * MetabolicMath.alcoholImpairment(state.alcohol, state.sugar))));
         double spice = DietBridge.snapshot(player).spice();
@@ -163,25 +158,7 @@ public final class SalienceEvents {
     public static void onBlockBroken(BlockEvent.BreakEvent event) {
         if (event.isCanceled() || !(event.getPlayer() instanceof ServerPlayer player)) return;
         MetabolicState state = MetabolicStateStore.get(player);
-        double grains = DietBridge.snapshot(player).actual(NutritionSnapshot.Group.GRAINS);
-        if (state.blackout) { event.setCanceled(true); return; }
-        if (grains < SalienceConfig.SECOND || !player.hasCorrectToolForDrops(event.getState())) {
-            state.workSequence = 0;
-            return;
-        }
-        long now = player.level().getGameTime();
-        int previous = state.workSequence;
-        int grace = (int) ((grains >= SalienceConfig.THIRD ? 100 : 60)
-                * MetabolicMath.amplification(state.sugar));
-        state.workSequence = state.lastBreakTick >= now - grace ? Math.min(5, state.workSequence + 1) : 1;
-        state.lastBreakTick = now;
-        if (grains >= SalienceConfig.FOURTH && state.workSequence == 5) state.workBurstTicks = 5 * 20;
-        if (previous < 5 && state.workSequence == 5) {
-            metabolicDiscovery(player, com.bettercontent.bettersurvivalphysiology.api.event.MetabolicDiscoveryEvent.Kind.WORK_RHYTHM, "Work Rhythm reached five successive valid breaks");
-            cueAt(player, AspectIdentity.WORK, "Work Rhythm ×5", event.getPos().getX() + .5,
-                    event.getPos().getY() + .7, event.getPos().getZ() + .5, 10);
-        }
-        SalienceNetwork.sync(player, DietBridge.snapshot(player), state);
+        if (state.blackout) event.setCanceled(true);
     }
 
     @SubscribeEvent
@@ -367,8 +344,7 @@ public final class SalienceEvents {
     private static void applyIdentityModifiers(ServerPlayer player, MetabolicState state, NutritionSnapshot nutrition) {
         double fruits = nutrition.actual(NutritionSnapshot.Group.FRUITS);
         double amplification = MetabolicMath.amplification(state.sugar);
-        double movement = NutritionEffects.movementSpeed(fruits, state.sugar)
-                + (fruits >= SalienceConfig.SECOND && state.sprintTicks >= 60 ? .12 * amplification : 0.0);
+        double movement = NutritionEffects.movementSpeed(fruits, state.sugar);
         updateAttribute(player, "minecraft:generic.movement_speed", FRUIT_MOVE, movement, AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_fruit_stride");
         updateAttribute(player, "forge:swim_speed", FRUIT_SWIM, movement, AttributeModifier.Operation.MULTIPLY_TOTAL, "salience_fruit_swim");
 
@@ -481,10 +457,6 @@ public final class SalienceEvents {
         int previous = state.lastPresentationFlags;
         state.lastPresentationFlags = flags;
         if (previous < 0) return true;
-        if (!PresentationFlags.has(previous, PresentationFlags.MOBILITY_STRIDE)
-                && PresentationFlags.has(flags, PresentationFlags.MOBILITY_STRIDE)) {
-            activation(player, AspectIdentity.MOBILITY, "Stride");
-        }
         if (!PresentationFlags.has(previous, PresentationFlags.CONTROL_BLACKOUT)
                 && PresentationFlags.has(flags, PresentationFlags.CONTROL_BLACKOUT))
             activation(player, AspectIdentity.CONTROL, "Blackout");
@@ -551,27 +523,17 @@ public final class SalienceEvents {
         for (int index = 0; index < count; index++) {
             double progress = count <= 1 ? 1.0 : index / (double) (count - 1);
             double px = x, py = y, pz = z;
-            switch (aspect) {
-                case IMPACT -> {
+            switch (aspect.aspect) {
+                case POWER -> {
                     double angle = Math.PI * 2.0 * index / count;
                     double radius = .12 + .48 * progress;
                     px += Math.cos(angle) * radius; pz += Math.sin(angle) * radius; py += (index % 3 - 1) * .08;
                 }
-                case TEMPO -> {
-                    int pulse = index % 2; double distance = .18 + .48 * progress;
-                    px += Math.cos(angleBase) * distance + Math.cos(angleBase + Math.PI / 2) * (pulse == 0 ? -.12 : .12);
-                    pz += Math.sin(angleBase) * distance + Math.sin(angleBase + Math.PI / 2) * (pulse == 0 ? -.12 : .12);
-                }
-                case WORK -> { px += (index % 3 - 1) * .12; py += .45 - progress * .55; pz += ((index / 3) % 3 - 1) * .12; }
-                case MOBILITY -> {
+                case MOTION -> {
                     double distance = .12 + .62 * progress;
                     px += Math.cos(angleBase) * distance; pz += Math.sin(angleBase) * distance; py += -.15 + Math.sin(progress * Math.PI) * .42;
                 }
                 case ENDURANCE -> { double angle = Math.PI * 2.0 * progress; px += Math.cos(angle) * .42; pz += Math.sin(angle) * .42; }
-                case ROBUSTNESS -> {
-                    double angle = Math.PI * 2.0 * (index % 6) / 6.0; double radius = .52 - .34 * progress;
-                    px += Math.cos(angle) * radius; pz += Math.sin(angle) * radius;
-                }
                 case RENEWAL -> { double angle = Math.PI * 3.0 * progress; px += Math.cos(angle) * (.22 - .1 * progress); pz += Math.sin(angle) * (.22 - .1 * progress); py += progress * .7 - .2; }
                 case CONTROL -> {
                     double angle = Math.PI * .5 * (index % 4); double radius = .5 * (1.0 - progress);

@@ -1,6 +1,6 @@
 {
   "icon": "minecraft:bread",
-  "color": "#F0E2C5",
+  "color": "#FF4055",
   "order": 2,
   "default_value": 0.0,
   "gain_multiplier": 1.0,

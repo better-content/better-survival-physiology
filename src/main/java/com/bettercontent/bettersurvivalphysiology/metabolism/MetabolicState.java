@@ -21,8 +21,6 @@ public final class MetabolicState {
     public int weatheredCooldown;
     public int dairyCleanseCooldown;
     public int sprintTicks;
-    public int workSequence;
-    public int workBurstTicks;
     public int orchardBurstCooldown;
     public int mealRecoveryCooldown;
     public transient double renewalExpiryRemainder;
@@ -31,7 +29,6 @@ public final class MetabolicState {
     public double blackoutX;
     public double blackoutY;
     public double blackoutZ;
-    public long lastBreakTick = -100L;
     public long lastAttackTick = -100L;
     public transient java.util.UUID heavyBlowTarget;
     public transient long heavyBlowAttackTick = -1L;
@@ -50,7 +47,6 @@ public final class MetabolicState {
         enduranceReserveTicks = decrement(enduranceReserveTicks);
         weatheredCooldown = decrement(weatheredCooldown);
         dairyCleanseCooldown = decrement(dairyCleanseCooldown);
-        workBurstTicks = decrement(workBurstTicks);
         orchardBurstCooldown = decrement(orchardBurstCooldown);
         mealRecoveryCooldown = decrement(mealRecoveryCooldown);
     }
