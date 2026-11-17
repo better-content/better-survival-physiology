@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
+    "#diet:dairy",
     {"id": "#forge:raw_meats", "required": false},
     {"id": "#forge:cooked_meats", "required": false},
     {"id": "#forge:meats", "required": false},

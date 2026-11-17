@@ -11,11 +11,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class NectarGainTest {
     @Test
     void capsAtHalfTheSmallestLastingGainWithoutIncreasingTheBase() {
-        assertEquals(0, NectarGain.capped(0, Map.of("fruits", .04)));
-        assertEquals(.02, NectarGain.capped(.06, Map.of("fruits", .04)));
-        assertEquals(.02, NectarGain.capped(.22, Map.of("dairy", .10, "grains", .04)));
-        assertEquals(.01, NectarGain.capped(.01, Map.of("fruits", .04)));
-        for (String group : new String[]{"proteins", "grains", "fruits", "vegetables", "spice", "dairy"})
+        assertEquals(0, NectarGain.capped(0, Map.of("carbs", .04)));
+        assertEquals(.02, NectarGain.capped(.06, Map.of("carbs", .04)));
+        assertEquals(.02, NectarGain.capped(.22, Map.of("proteins", .10, "carbs", .04)));
+        assertEquals(.01, NectarGain.capped(.01, Map.of("carbs", .04)));
+        for (String group : new String[]{"proteins", "carbs", "vegetables", "spice"})
             assertEquals(.02, NectarGain.capped(.34, Map.of(group, .04)), group);
     }
 
@@ -25,22 +25,23 @@ class NectarGainTest {
         assertEquals(.22, NectarGain.capped(.22, Map.of("sugars", .001, "alcohol", .001,
                 "unknown", .001, "proteins", -1.0, "grains", 0.0, "fruits", Double.NaN,
                 "dairy", Double.POSITIVE_INFINITY, "vegetables", Double.NEGATIVE_INFINITY)));
-        assertEquals(.000005, NectarGain.capped(.06, Map.of("fruits", .00001)));
-        assertEquals(0, NectarGain.capped(Double.NaN, Map.of("fruits", .04)));
+        assertEquals(.000005, NectarGain.capped(.06, Map.of("carbs", .00001)));
+        assertEquals(.06, NectarGain.capped(.06, Map.of("fruits", .00001)),
+                "Legacy source labels cannot masquerade as a native potential serving");
+        assertEquals(0, NectarGain.capped(Double.NaN, Map.of("carbs", .04)));
     }
 
     @Test
-    void representativeCappedPercentagesStayVisiblyBelowTheirComparator() {
+    void sourceMirrorNeverBecomesASecondCarbBarOrTooltipAward() {
         for (double fruit : new double[]{.04, .001}) {
-            var gains = Map.of("fruits", fruit, "sugars", .5);
+            var source = Map.of("fruits", fruit, "sugars", .5);
+            var serving = new com.bettercontent.bettersurvivalphysiology.nutrition.ServingVectors.SourceServing(source);
+            double mirrored = NectarGain.capped(.06, serving.canonicalIngredient(0, 0).gains());
+            var canonical = serving.canonicalIngredient(mirrored, 0).gains();
             var entries = com.bettercontent.bettersurvivalphysiology.presentation.FoodNutrients.entries(
-                    gains, NectarGain.capped(.06, gains), 0, false);
-            var nectar = entries.stream().filter(entry -> entry.aspect() ==
-                    com.bettercontent.bettersurvivalphysiology.presentation.AspectIdentity.TEMPO).findFirst().orElseThrow();
-            var nutrient = entries.stream().filter(entry -> entry.aspect() ==
-                    com.bettercontent.bettersurvivalphysiology.presentation.AspectIdentity.MOBILITY).findFirst().orElseThrow();
-            assertEquals(fruit * .5, nectar.gain());
-            assertNotEquals(nectar.percentage(), nutrient.percentage());
+                    canonical, mirrored, 0, false);
+            assertEquals(1, entries.size(), "Exactly one native Carb bar, never fruit plus hidden sugar");
+            assertEquals(canonical.get("carbs"), entries.get(0).gain(), 1e-12);
         }
     }
 
@@ -52,15 +53,17 @@ class NectarGainTest {
         assertTrue(profiles.contains(".map(gains -> servingSugar(stack, gains)).orElse(0.0)"));
         assertTrue(profiles.contains("LOGGER.error("));
         String finish = Files.readString(root.resolve("runtime/SalienceEvents.java"));
-        assertTrue(finish.contains("double sugar = ConsumableProfiles.servingSugar(player, stack);"));
+        assertFalse(finish.contains("double sugar = ConsumableProfiles.servingSugar(player, stack);"),
+                "Native food awards canonical Carbs once without separate sugar");
         String tooltip = Files.readString(root.resolve("client/ClientSalienceEvents.java"));
         assertTrue(tooltip.contains("ConsumableProfiles.servingSugar(event.getItemStack(), gains)"));
         String beverage = Files.readString(root.resolve("compat/BeverageCompat.java"));
         assertTrue(beverage.contains("ConsumableProfiles.servingSugar(stack, serving)"));
-        assertTrue(beverage.contains(".orElse(0.0)"));
+        assertTrue(beverage.contains("gains.putDouble(\"carbs\""));
         String sip = beverage.substring(beverage.indexOf("public static void sip("));
         assertFalse(sip.contains("servingSugar"));
-        assertTrue(sip.contains("BeverageNutrition.award(nutrition.getDouble(SUGAR), event.from(), event.to())"));
+        assertFalse(sip.contains("BeverageNutrition.award(nutrition.getDouble(SUGAR), event.from(), event.to())"),
+                "Paid juice must not award a hidden second sugar dose");
         assertFalse(profiles.contains("getValue("), "Potential serving calculation must not read current nutrition capacity");
     }
 }

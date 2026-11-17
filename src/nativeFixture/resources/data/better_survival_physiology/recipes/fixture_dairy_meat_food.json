@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {"item": "brewinandchewin:flaxen_cheese_wedge"},
+    {"item": "minecraft:beef"}
+  ],
+  "result": {"item": "better_survival_physiology:fixture_dairy_meat_food"}
+}

@@ -42,7 +42,8 @@ public final class NutritionThreadBoundary {
 
     public static boolean isNutritionLow(NutritionSnapshot nutrition, double ordinaryThreshold) {
         for (NutritionSnapshot.Group group : NutritionSnapshot.Group.values()) {
-            if (nutrition.actual(group) < ordinaryThreshold) return true;
+            // Optional alcohol must never be a dietary completeness/recovery requirement.
+            if (group != NutritionSnapshot.Group.ALCOHOL && nutrition.actual(group) < ordinaryThreshold) return true;
         }
         return false;
     }

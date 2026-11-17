@@ -1,13 +1,13 @@
 package com.bettercontent.bettersurvivalphysiology.presentation;
 
-import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicMath;
 import com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge;
+import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicMath;
 import com.bettercontent.bettersurvivalphysiology.metabolism.NutritionEffects;
 import com.bettercontent.bettersurvivalphysiology.network.MetabolicSyncPacket;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Continuous primary benefits and group-specific behavioural unlocks. */
+/** One native Diet meter per food identity; shared aspect names are explanatory only. */
 public final class DietBenefits {
     private DietBenefits() {}
 
@@ -15,105 +15,87 @@ public final class DietBenefits {
 
     public static float value(MetabolicSyncPacket state, AspectIdentity aspect) {
         return switch (aspect) {
-            case IMPACT -> state.proteins();
-            case TEMPO -> state.sugar();
-            case WORK -> state.grains();
-            case MOBILITY -> state.fruits();
-            case ENDURANCE -> state.vegetables();
-            case ROBUSTNESS -> state.spice();
-            case RENEWAL -> state.dairy();
+            case POWER -> state.proteins();
+            case MOTION -> state.carbs();
+            case ENDURANCE -> state.spice();
+            case RENEWAL -> state.vegetables();
             case CONTROL -> state.alcohol();
         };
     }
 
     public static String current(AspectIdentity aspect, MetabolicSyncPacket state) {
-        double n = value(state, aspect), nectar = state.sugar();
+        double n = value(state, aspect), carbs = state.carbs();
         return switch (aspect) {
-            case IMPACT -> String.format("Melee damage +%.1f%%", 100 * NutritionEffects.meleeDamage(n, nectar));
-            case WORK -> String.format("Right-tool mining +%.1f%%", 100 * NutritionEffects.miningSpeed(n, nectar));
-            case MOBILITY -> String.format("Move/swim speed +%.1f%%", 100 * NutritionEffects.movementSpeed(n, nectar));
-            case ENDURANCE -> String.format("Hunger/thirst/stamina costs -%.1f%%; loads extra", 100 * NutritionEffects.resourceSavings(n, nectar));
-            case ROBUSTNESS -> String.format("Right-tool mining +%.1f%%; move/swim +%.1f%%",
-                    100 * SpiceBridge.miningBonus(n, MetabolicMath.amplification(nectar)),
-                    100 * SpiceBridge.movementBonus(n, MetabolicMath.amplification(nectar)));
-            case RENEWAL -> String.format("Harmful effects fade ×%.2f faster", 1 + NutritionEffects.harmfulExpiryBonus(n, nectar));
-            case TEMPO -> String.format("Benefits & %s penalties ×%.2f; hunger/nutrient drain ×%.2f",
-                    AspectIdentity.CONTROL.displayName,
-                    MetabolicMath.amplification(n), MetabolicMath.sugarDrain(n));
+            case POWER -> String.format("Melee +%.1f%%; correct-tool mining +%.1f%%",
+                    100 * NutritionEffects.meleeDamage(n, carbs), 100 * NutritionEffects.miningSpeed(n, carbs));
+            case MOTION -> String.format("Move/swim +%.1f%%; benefits & Alcohol penalties ×%.2f; drain ×%.2f",
+                    100 * NutritionEffects.movementSpeed(n, n), MetabolicMath.amplification(n), MetabolicMath.sugarDrain(n));
+            case ENDURANCE -> String.format("Resource costs -%.1f%%; correct-tool mining +%.1f%%; move/swim +%.1f%%",
+                    100 * NutritionEffects.resourceSavings(n, carbs),
+                    100 * SpiceBridge.miningBonus(n, MetabolicMath.amplification(carbs)),
+                    100 * SpiceBridge.movementBonus(n, MetabolicMath.amplification(carbs)));
+            case RENEWAL -> String.format("Harmful effects fade ×%.2f faster", 1 + NutritionEffects.harmfulExpiryBonus(n, carbs));
             case CONTROL -> PresentationFlags.has(state.flags(), PresentationFlags.CONTROL_BLACKOUT)
                     ? "Blackout: no actions or movement. Clears below 85%."
                     : String.format("Damage taken -%.0f%%; move -%.0f%%; attack/use -%.0f%%; costs +%.0f%%",
-                    100 * MetabolicMath.alcoholReduction(n, nectar),
-                    75 * MetabolicMath.alcoholImpairment(n, nectar),
-                    90 * MetabolicMath.alcoholImpairment(n, nectar),
-                    200 * MetabolicMath.alcoholImpairment(n, nectar));
+                    100 * MetabolicMath.alcoholReduction(n, carbs),
+                    75 * MetabolicMath.alcoholImpairment(n, carbs),
+                    90 * MetabolicMath.alcoholImpairment(n, carbs),
+                    200 * MetabolicMath.alcoholImpairment(n, carbs));
         };
     }
 
     public static String effect(AspectIdentity aspect, NutritionTier tier) {
         return switch (aspect) {
-            case IMPACT -> "Melee damage scales from 0 to +40%; charged strike at 40%, cleave at 80%";
-            case WORK -> "Correct-tool mining scales from 0 to +100%; work sequence at 40%, grace at 60%, burst at 80%";
-            case MOBILITY -> "Movement/swimming scale from 0 to +25%; safer falls at 20%, sprint stride at 40%, leap at 80%";
-            case ENDURANCE -> "All resource costs fall from 0 to -50%; emergency reserve at 80%";
-            case ROBUSTNESS -> String.format("Right-tool mining up to +%.0f%%; move/swim up to +%.0f%%. Sugar stays within caps.",
+            case POWER -> "Melee damage up to +40%; correct-tool mining up to +100%; charged strike at 40%, cleave at 80%";
+            case MOTION -> "Move/swim up to +25%; safer falls at 20%, leap at 80%; amplifies nutrients and Alcohol, increases expenditure";
+            case ENDURANCE -> String.format("Resource savings up to 50%% (85%% amplified cap), Deep Reserve at 80%%; "
+                    + "Spice costs HP when eaten; mining up to +%.0f%%, move/swim up to +%.0f%%",
                     100 * SpiceBridge.miningCap(), 100 * SpiceBridge.movementCap());
-            case RENEWAL -> "Harmful-effect expiry scales from 1× to 2×; meal recovery at 40%, cleanse at 80%";
-            case TEMPO -> "Amplifies nutrients and " + AspectIdentity.CONTROL.displayName
-                    + "'s benefits AND penalties; consumption grows exponentially";
-            case CONTROL -> "Damage reduction scales from 0 to 30%; impairment above 30%, blackout at 100%";
+            case RENEWAL -> "Harmful-effect expiry up to 2×; meal recovery at 40%, cleanse at 80%";
+            case CONTROL -> "Optional: damage reduction up to 30%; impairment above 30%, blackout at 100%; Carbs amplifies and hastens clearance";
         };
     }
 
-    public static String preparedPromise(AspectIdentity aspect) {
-        return effect(aspect, NutritionTier.SECOND);
-    }
+    public static String preparedPromise(AspectIdentity aspect) { return effect(aspect, NutritionTier.SECOND); }
 
     public static List<GuideTier> guide(AspectIdentity aspect, MetabolicSyncPacket state) {
-        if (aspect == AspectIdentity.TEMPO || aspect == AspectIdentity.CONTROL) return List.of(
-                continuousGuide(aspect, .20f, state), continuousGuide(aspect, .40f, state),
-                continuousGuide(aspect, .60f, state), continuousGuide(aspect, .80f, state));
+        if (aspect == AspectIdentity.CONTROL) return List.of(
+                continuousAlcohol(.20f, state), continuousAlcohol(.40f, state),
+                continuousAlcohol(.60f, state), continuousAlcohol(.80f, state));
         List<GuideTier> result = new ArrayList<>();
         result.add(new GuideTier("Now", -1, current(aspect, state), true));
         switch (aspect) {
-            case IMPACT -> {
+            case POWER -> {
                 perk(result, state, aspect, .40f, "No attacks for 4s: charged hit +50% damage. Cooldown 12s.");
                 perk(result, state, aspect, .80f, "Charged hit: 35% splash to up to 2 nearby foes.");
             }
-            case WORK -> {
-                perk(result, state, aspect, .40f, "Right-tool breaks: +10% mining speed each, up to +50%.");
-                perk(result, state, aspect, .60f, "Mining streak lasts 5s between breaks (was 3s).");
-                perk(result, state, aspect, .80f, "5 valid breaks: +100% mining speed for 5s.");
-            }
-            case MOBILITY -> {
-                perk(result, state, aspect, .20f, "Fall damage -35% × " + aspect.displayName + " level");
-                perk(result, state, aspect, .40f, "Sprint 3s: +12% extra move/swim speed.");
+            case MOTION -> {
+                perk(result, state, aspect, .20f, "Fall damage -35% × Carbs level");
                 perk(result, state, aspect, .80f, "Sprint-jump: forward leap. Cooldown 12s.");
             }
-            case ENDURANCE -> perk(result, state, aspect, .80f, "Low food/thirst/stamina: 10s reserve. Cooldown 2m. Loads still cost extra.");
-            case ROBUSTNESS -> {
-                result.add(new GuideTier("Intake", -1, String.format("+%.0f%% level per Spice unit; ordinary nutrient decay.", 100 * SpiceBridge.dietGain(1)), true));
-                result.add(new GuideTier("Serving", -1, String.format("%.1f HP per Spice unit; cap %.1f HP. Full Spice still pays.",
-                        SpiceBridge.hpPerUnit(), SpiceBridge.hpCap()), true));
+            case ENDURANCE -> {
+                perk(result, state, aspect, .80f, "Low food/thirst/stamina: 10s reserve. Cooldown 2m. Loads still cost extra.");
+                result.add(new GuideTier("Spice intake", -1, String.format("Paid Spice: +%.0f%% level/unit; %.1f HP/unit, max %.1f HP. No standing meter cost.",
+                        100 * SpiceBridge.dietGain(1), SpiceBridge.hpPerUnit(), SpiceBridge.hpCap()), true));
             }
             case RENEWAL -> {
                 perk(result, state, aspect, .40f, "Eat: heal 1 heart. Cooldown 30s.");
                 perk(result, state, aspect, .80f, "Clear 1 timed harmful effect. Cooldown 20s.");
             }
-            default -> throw new IllegalArgumentException("Not an ordinary nutrient");
+            default -> throw new IllegalArgumentException("Unknown native nutrient");
         }
-        result.add(new GuideTier("Sugar", -1, "Sugar boosts timing, not unlocks. Spice stays within its caps; resource savings cap at 85%.", true));
+        result.add(new GuideTier("Carbs", -1,
+                "Carbs amplifies benefits and Alcohol penalties, not unlock thresholds. Spice bonuses remain capped.", true));
         return List.copyOf(result);
     }
 
-    /** Floor of the highest active behavioural unlock, not a fictitious shared tier. */
+    /** Highest active behavioural unlock; continuous effects have no invented threshold. */
     public static double activePerkFloor(AspectIdentity aspect, double value) {
-        if (aspect == AspectIdentity.ROBUSTNESS) return 0; // Spice has no Grain/Fruit perk unlocks.
+        if (aspect == AspectIdentity.CONTROL) return 0;
         if (value >= .80) return .80;
-        if (aspect == AspectIdentity.WORK && value >= .60) return .60;
-        if ((aspect == AspectIdentity.IMPACT || aspect == AspectIdentity.WORK
-                || aspect == AspectIdentity.MOBILITY || aspect == AspectIdentity.RENEWAL) && value >= .40) return .40;
-        if (aspect == AspectIdentity.MOBILITY && value >= .20) return .20;
+        if ((aspect == AspectIdentity.POWER || aspect == AspectIdentity.RENEWAL) && value >= .40) return .40;
+        if (aspect == AspectIdentity.MOTION && value >= .20) return .20;
         return 0;
     }
 
@@ -122,19 +104,11 @@ public final class DietBenefits {
                 value(state, aspect) >= threshold));
     }
 
-    private static GuideTier continuousGuide(AspectIdentity aspect, float sample, MetabolicSyncPacket state) {
-        String text;
-        if (aspect == AspectIdentity.TEMPO) {
-            text = String.format("Benefits & %s penalties ×%.2f; hunger/nutrient drain ×%.2f",
-                    AspectIdentity.CONTROL.displayName,
-                    MetabolicMath.amplification(sample), MetabolicMath.sugarDrain(sample));
-        } else {
-            double impairment = MetabolicMath.alcoholImpairment(sample, state.sugar());
-            text = String.format("Damage taken -%.0f%%; move -%.0f%%; attack/use -%.0f%%; costs +%.0f%%",
-                    100 * MetabolicMath.alcoholReduction(sample, state.sugar()),
-                    75 * impairment, 90 * impairment, 200 * impairment);
-        }
-        return new GuideTier(Math.round(sample * 100) + "%", sample, text,
-                value(state, aspect) >= sample);
+    private static GuideTier continuousAlcohol(float sample, MetabolicSyncPacket state) {
+        double impairment = MetabolicMath.alcoholImpairment(sample, state.carbs());
+        return new GuideTier(Math.round(sample * 100) + "%", sample,
+                String.format("Damage taken -%.0f%%; move -%.0f%%; attack/use -%.0f%%; costs +%.0f%%",
+                        100 * MetabolicMath.alcoholReduction(sample, state.carbs()),
+                        75 * impairment, 90 * impairment, 200 * impairment), state.alcohol() >= sample);
     }
 }

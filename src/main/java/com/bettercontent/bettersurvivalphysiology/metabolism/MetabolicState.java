@@ -3,14 +3,10 @@ package com.bettercontent.bettersurvivalphysiology.metabolism;
 import net.minecraft.nbt.CompoundTag;
 
 public final class MetabolicState {
-    private static final String SUGAR = "sugar";
-    private static final String ALCOHOL = "alcohol";
     private static final String BLACKOUT = "blackout";
     private static final String NUTRITION_THREAD_TOKEN = "nutrition_thread_token";
     private static final String NUTRITION_WARNING_PUBLISHED = "nutrition_warning_published";
 
-    public double sugar;
-    public double alcohol;
     public boolean blackout;
     public String nutritionThreadToken = "";
     public boolean nutritionWarningPublished;
@@ -21,8 +17,6 @@ public final class MetabolicState {
     public int weatheredCooldown;
     public int dairyCleanseCooldown;
     public int sprintTicks;
-    public int workSequence;
-    public int workBurstTicks;
     public int orchardBurstCooldown;
     public int mealRecoveryCooldown;
     public transient double renewalExpiryRemainder;
@@ -31,50 +25,33 @@ public final class MetabolicState {
     public double blackoutX;
     public double blackoutY;
     public double blackoutZ;
-    public long lastBreakTick = -100L;
     public long lastAttackTick = -100L;
     public transient java.util.UUID heavyBlowTarget;
     public transient long heavyBlowAttackTick = -1L;
     public transient final com.bettercontent.bettersurvivalphysiology.runtime.HeavyBlow.Feedback heavyBlowFeedback =
             new com.bettercontent.bettersurvivalphysiology.runtime.HeavyBlow.Feedback();
     public transient int lastPresentationFlags = -1;
-    public transient byte[] lastNutritionTiers = {-1, -1, -1, -1, -1, -1};
+    public transient byte[] lastNutritionTiers = {-1, -1, -1, -1, -1};
 
     public void tickTransient() {
-        // All loads use the same sugar level from the start of this tick.
-        alcohol = MetabolicMath.tickAlcohol(alcohol, sugar);
-        sugar = MetabolicMath.tickSugar(sugar);
-        if (blackout && alcohol <= 0.85) blackout = false;
         heavyBlowCooldown = decrement(heavyBlowCooldown);
         enduranceReserveCooldown = decrement(enduranceReserveCooldown);
         enduranceReserveTicks = decrement(enduranceReserveTicks);
         weatheredCooldown = decrement(weatheredCooldown);
         dairyCleanseCooldown = decrement(dairyCleanseCooldown);
-        workBurstTicks = decrement(workBurstTicks);
         orchardBurstCooldown = decrement(orchardBurstCooldown);
         mealRecoveryCooldown = decrement(mealRecoveryCooldown);
     }
 
-    public int renewalExtraTicks(double dairy) {
-        renewalExpiryRemainder += NutritionEffects.harmfulExpiryBonus(dairy, sugar);
+    public int renewalExtraTicks(double vegetables, double carbs) {
+        renewalExpiryRemainder += NutritionEffects.harmfulExpiryBonus(vegetables, carbs);
         int ticks = (int) renewalExpiryRemainder;
         renewalExpiryRemainder -= ticks;
         return ticks;
     }
 
-    public void addSugar(double amount) {
-        sugar = MetabolicMath.clamp01(sugar + Math.max(0.0, amount));
-    }
-
-    public void addAlcohol(double amount) {
-        alcohol = MetabolicMath.clamp01(alcohol + Math.max(0.0, amount));
-        if (alcohol >= 1.0) blackout = true;
-    }
-
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
-        tag.putDouble(SUGAR, sugar);
-        tag.putDouble(ALCOHOL, alcohol);
         tag.putBoolean(BLACKOUT, blackout);
         if (blackout) {
             tag.putDouble("blackout_x", blackoutX);
@@ -92,9 +69,7 @@ public final class MetabolicState {
 
     public static MetabolicState load(CompoundTag tag) {
         MetabolicState state = new MetabolicState();
-        state.sugar = MetabolicMath.clamp01(tag.getDouble(SUGAR));
-        state.alcohol = MetabolicMath.clamp01(tag.getDouble(ALCOHOL));
-        state.blackout = tag.getBoolean(BLACKOUT) && state.alcohol > 0.85;
+        state.blackout = tag.getBoolean(BLACKOUT);
         state.blackoutX = tag.getDouble("blackout_x");
         state.blackoutY = tag.getDouble("blackout_y");
         state.blackoutZ = tag.getDouble("blackout_z");

@@ -1,32 +1,22 @@
 package com.bettercontent.bettersurvivalphysiology.nutrition;
 
-
-public record NutritionSnapshot(float proteins, float grains, float fruits, float vegetables, float spice, float dairy) {
-    public static final NutritionSnapshot EMPTY = new NutritionSnapshot(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+/** The five authoritative native Diet tracker values; no parallel sugar/alcohol balances. */
+public record NutritionSnapshot(float proteins, float carbs, float spice, float vegetables, float alcohol) {
+    public static final NutritionSnapshot EMPTY = new NutritionSnapshot(0, 0, 0, 0, 0);
 
     public float actual(Group group) {
         return switch (group) {
-            case FRUITS -> fruits;
-            case GRAINS -> grains;
             case PROTEINS -> proteins;
-            case VEGETABLES -> vegetables;
+            case CARBS -> carbs;
             case SPICE -> spice;
-            case DAIRY -> dairy;
+            case VEGETABLES -> vegetables;
+            case ALCOHOL -> alcohol;
         };
     }
 
     public enum Group {
-        PROTEINS("proteins"),
-        GRAINS("grains"),
-        FRUITS("fruits"),
-        VEGETABLES("vegetables"),
-        SPICE("spice"),
-        DAIRY("dairy");
-
+        PROTEINS("proteins"), CARBS("carbs"), SPICE("spice"), VEGETABLES("vegetables"), ALCOHOL("alcohol");
         public final String id;
-
-        Group(String id) {
-            this.id = id;
-        }
+        Group(String id) { this.id = id; }
     }
 }

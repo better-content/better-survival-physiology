@@ -11,7 +11,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class SalienceNetwork {
-    private static final String PROTOCOL = "7";
+    private static final String PROTOCOL = "8";
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(SystemicSalienceMod.MOD_ID, "main"),
             () -> PROTOCOL,
@@ -24,17 +24,21 @@ public final class SalienceNetwork {
     public static void init() {
         CHANNEL.registerMessage(0, MetabolicSyncPacket.class,
                 MetabolicSyncPacket::encode, MetabolicSyncPacket::decode, MetabolicSyncPacket::handle);
+        CHANNEL.registerMessage(1, DietDairySyncPacket.class,
+                DietDairySyncPacket::encode, DietDairySyncPacket::decode, DietDairySyncPacket::handle);
+    }
+
+    public static void syncDerivedDairy(ServerPlayer player, DietDairySyncPacket classification) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), classification);
     }
 
     public static void sync(ServerPlayer player, NutritionSnapshot nutrition, MetabolicState state) {
         PresentationSnapshot presentation = PresentationSnapshot.create(player, nutrition, state);
         int[] seconds = presentation.nutrientSeconds();
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new MetabolicSyncPacket(
-                nutrition.proteins(), nutrition.grains(), nutrition.fruits(), nutrition.vegetables(), nutrition.spice(), nutrition.dairy(),
-                (float) state.sugar, (float) state.alcohol,
+                nutrition.proteins(), nutrition.carbs(), nutrition.spice(), nutrition.vegetables(), nutrition.alcohol(),
                 presentation.ordinary(), presentation.prepared(), presentation.feast(), presentation.flags(), presentation.workSequence(),
-                seconds[0], seconds[1], seconds[2], seconds[3], seconds[4], seconds[5],
-                presentation.sugarSeconds(), presentation.alcoholSeconds()
+                seconds[0], seconds[1], seconds[2], seconds[3], seconds[4]
         ));
     }
 

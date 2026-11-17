@@ -58,8 +58,7 @@ public final class ClientSalienceEvents {
             int x = (event.getWindow().getGuiScaledWidth() - rowSize * cellWidth) / 2 + (index % columns) * cellWidth;
             int y = top + row * 30;
             var badge = AspectBadge.of(entry.aspect(), spiceAvailable);
-            ResourceLocation texture = entry.aspect() == AspectIdentity.ROBUSTNESS
-                    ? (spiceAvailable ? SPICE_ICON : OWN_SPICE_ICON) : ICONS;
+            ResourceLocation texture = new ResourceLocation(badge.namespace(), badge.path());
             event.getGuiGraphics().blit(texture, x + (cellWidth - badge.width()) / 2, y,
                     badge.u(), badge.v(), badge.width(), badge.height(), badge.textureWidth(), badge.textureHeight());
             event.getGuiGraphics().drawString(minecraft.font, entry.label(), x + (cellWidth - minecraft.font.width(entry.label())) / 2, y + 19, 0xffffffff, true);
@@ -73,7 +72,7 @@ public final class ClientSalienceEvents {
         Map<String, Double> gains = new HashMap<>();
         var culinary = com.bettercontent.bettersurvivalphysiology.api.CulinaryNutritionApi.resolve(minecraft.player, event.getItemStack());
         if (culinary.isPresent()) {
-            gains.putAll(culinary.get().adjusted());
+            gains.putAll(culinary.get().adjusted().gains());
             double units = SpiceBridge.resolveUnits(minecraft.player, event.getItemStack());
             if (units > 0) gains.put("spice", SpiceBridge.dietGain(units));
         } else if (com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.manages(event.getItemStack())) {
@@ -114,6 +113,12 @@ public final class ClientSalienceEvents {
         // The oversized badge font extends above its row; reserve a full line of clearance.
         event.getToolTip().add(Component.empty());
         event.getToolTip().add(line);
+        if (net.minecraft.client.gui.screens.Screen.hasShiftDown() && !entries.isEmpty()) {
+            String aspects = entries.stream().map(entry -> entry.aspect().aspect.displayName).distinct()
+                    .collect(java.util.stream.Collectors.joining(", "));
+            event.getToolTip().add(Component.literal("Shared aspects: " + aspects)
+                    .withStyle(style -> style.withColor(0xAAA89E)));
+        }
     }
 
 }

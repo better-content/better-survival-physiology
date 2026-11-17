@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Server balance surface for the eight categorical nutrition identities. */
+/** Server balance surface for the five native Diet groups and paid serving sources. */
 public final class SalienceConfig {
     public static final List<String> DEFAULT_ALCOHOL_POTENCIES = List.of(
             "brewinandchewin:kombucha=0.08", "brewinandchewin:beer=0.14", "brewinandchewin:pale_jane=0.16",
@@ -21,6 +21,7 @@ public final class SalienceConfig {
     public static final ForgeConfigSpec SPEC;
     public static final ForgeConfigSpec.DoubleValue SUGAR_HALF_LIFE_MINUTES;
     public static final ForgeConfigSpec.DoubleValue ALCOHOL_CLEAR_MINUTES;
+    public static final ForgeConfigSpec.DoubleValue DAIRY_PROTEIN_SHARE;
     public static final double FIRST = 0.20;
     public static final double SECOND = 0.40;
     public static final double THIRD = 0.60;
@@ -32,6 +33,7 @@ public final class SalienceConfig {
         builder.comment("Nectar and Booze load tuning.").push("metabolism");
         SUGAR_HALF_LIFE_MINUTES = range(builder, "sugarHalfLifeMinutes", 4.0, 0.1, 120.0);
         ALCOHOL_CLEAR_MINUTES = range(builder, "alcoholClearMinutes", 20.0, 0.1, 240.0);
+        DAIRY_PROTEIN_SHARE = range(builder, "dairyProteinShare", 0.80, 0.0, 1.0);
         ALCOHOL_POTENCIES = builder.comment("item_id=load entries; replace this list to tune drinks or add compat drinks.")
                 .defineList("alcoholPotencies", DEFAULT_ALCOHOL_POTENCIES, SalienceConfig::validAlcoholEntry);
         builder.pop();

@@ -53,11 +53,11 @@ class NutritionEffectsTest {
     }
 
     @Test
-    void fractionalCreamDoesNotRoundUpToOneExtraTickEveryTick() {
+    void fractionalVegetablesDoNotRoundUpToOneExtraTickEveryTick() {
         var state = new MetabolicState();
         int removed = 0;
         for (int tick = 0; tick < 1000; tick++) {
-            removed += state.renewalExtraTicks(.01);
+            removed += state.renewalExtraTicks(.01, 0);
         }
         assertEquals(10, removed);
     }

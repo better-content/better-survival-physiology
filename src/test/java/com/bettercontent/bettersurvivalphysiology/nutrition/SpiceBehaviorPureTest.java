@@ -13,7 +13,7 @@ public final class SpiceBehaviorPureTest {
     }
     public static void run() {
         assertions = 0;
-        var n = new NutritionSnapshot(.1f, .2f, .3f, .4f, .5f, .6f);
+        var n = new NutritionSnapshot(.1f, .2f, .5f, .4f, .0f);
         near(n.actual(NutritionSnapshot.Group.SPICE), .5);
         check(NutritionSnapshot.Group.SPICE.id.equals("spice"), "Own Spice persistence identity");
         check(NutritionSnapshot.Group.VEGETABLES.id.equals("vegetables"), "Diet Vegetables is a distinct ordinary group from Spice");

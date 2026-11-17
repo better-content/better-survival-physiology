@@ -67,20 +67,21 @@ public final class BadgeResourcePureTest {
                 }
             }
         }
-        check(glyphs.size() == 8, "Exactly eight identities, no old duplicate Spice glyph");
+        check(glyphs.size() == 8, "Legacy eight-cell atlas stays loadable; only five native identities are active");
+        check(AspectIdentity.values().length == 5, "Exactly five active badge identities");
         for (var aspect : AspectIdentity.values()) {
             var badge = AspectBadge.of(aspect, spiceAvailable);
             var glyph = glyphs.get(aspect.badge().codePointAt(0));
             String resource = "/assets/" + badge.namespace() + "/" + badge.path();
             check(glyph != null && glyph.u() == badge.u(), "HUD and font use the same native cell origin");
-            if (aspect == AspectIdentity.ROBUSTNESS) {
+            if (aspect == AspectIdentity.ENDURANCE) {
                 check(badge.namespace().equals(spiceAvailable ? "better_spicy_farmers" : "better_survival_physiology"),
                         "Only actual optional mod presence selects external HUD badge");
                 try (var hudBytes = required(resources, resource); var fontBytes = required(resources, glyph.resource())) {
                     check(java.util.Arrays.equals(hudBytes.readAllBytes(), fontBytes.readAllBytes()),
                             "Spice HUD and independently loadable font use byte-identical generated badge");
                 }
-            } else check(glyph.resource().equals(resource), "Other seven glyph resource identities unchanged");
+            } else check(glyph.resource().equals(resource), "Other four active glyph resource identities unchanged");
             try (var stream = required(resources, resource)) {
                 var image = ImageIO.read(stream);
                 check(image.getWidth() == badge.textureWidth() && image.getHeight() == badge.textureHeight(),

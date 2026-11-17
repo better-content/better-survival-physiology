@@ -1,7 +1,7 @@
 package com.bettercontent.bettersurvivalphysiology.mixin;
 
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicMath;
-import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicStateStore;
+import com.bettercontent.bettersurvivalphysiology.nutrition.DietBridge;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Final;
@@ -16,8 +16,9 @@ public abstract class DietDecayMixin {
     @Shadow @Final private Player player;
 
     @ModifyVariable(method = "decay", at = @At("STORE"), index = 6, require = 1)
-    private float betterContent$sugarDecay(float nativeDecay) {
+    private float betterContent$carbsDrain(float nativeDecay) {
         if (!(player instanceof ServerPlayer server)) return nativeDecay;
-        return (float) (nativeDecay * MetabolicMath.sugarDrain(MetabolicStateStore.get(server).sugar));
+        return (float) (nativeDecay * MetabolicMath.sugarDrain(DietBridge.snapshot(server).carbs()));
     }
+
 }

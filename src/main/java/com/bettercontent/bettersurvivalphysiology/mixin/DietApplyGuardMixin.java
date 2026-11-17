@@ -1,8 +1,7 @@
 package com.bettercontent.bettersurvivalphysiology.mixin;
 
+import com.bettercontent.bettersurvivalphysiology.nutrition.NativeDietRoster;
 import com.illusivesoulworks.diet.api.type.IDietResult;
-import com.mojang.logging.LogUtils;
-import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -13,18 +12,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** Covers both single-item and composite Diet consume() paths before native apply() dereferences values. */
+/** Both native single-item and composite consume() reach this one final apply() boundary.
+ * Missing or unrecognized groups are a hard configuration failure, not silent omission. */
 @Mixin(targets = "com.illusivesoulworks.diet.common.capability.PlayerDietTracker", remap = false)
 public abstract class DietApplyGuardMixin {
-    private static final Logger LOGGER = LogUtils.getLogger();
     @Shadow @Final private Map<String, Float> values;
 
-    @Inject(method = "apply(Lcom/illusivesoulworks/diet/api/type/IDietResult;)V", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "apply(Lcom/illusivesoulworks/diet/api/type/IDietResult;)V", at = @At("HEAD"), remap = false)
     private void betterContent$rejectMissingGroups(IDietResult result, CallbackInfo ci) {
         var unknown = result.get().keySet().stream().map(group -> group.getName())
-                .filter(group -> !values.containsKey(group)).collect(Collectors.toSet());
-        if (unknown.isEmpty()) return;
-        LOGGER.error("Blocked native Diet award: groups {} are missing from the active suite {}. Repair pack Diet resources before playing.", unknown, values.keySet());
-        ci.cancel();
+                .filter(group -> !NativeDietRoster.GROUPS.contains(group) || !values.containsKey(group))
+                .collect(Collectors.toSet());
+        if (!unknown.isEmpty() || !values.keySet().equals(NativeDietRoster.GROUPS))
+            throw new IllegalStateException("Diet config error: native result groups " + unknown
+                    + " cannot be committed to tracker " + values.keySet());
     }
 }

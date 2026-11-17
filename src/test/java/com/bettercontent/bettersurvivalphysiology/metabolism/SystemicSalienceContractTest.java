@@ -31,7 +31,8 @@ class SystemicSalienceContractTest {
     }
 
     @Test
-    void readinessStripContainsExactlyEightSquareCells() throws IOException {
+    void legacyReadinessStripKeepsItsEightPhysicalCellsWhileNativeGroupsAreFive() throws IOException {
+        assertTrue(com.bettercontent.bettersurvivalphysiology.presentation.AspectIdentity.values().length == 5);
         try (var stream = getClass().getResourceAsStream("/assets/better_survival_physiology/textures/gui/nutrition_states.png")) {
             assertTrue(stream != null);
             var image = ImageIO.read(stream);

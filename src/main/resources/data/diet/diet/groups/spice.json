@@ -1,7 +1,7 @@
 {
   "icon": "minecraft:blaze_powder",
-  "color": "#D85C32",
-  "order": 5,
+  "color": "#52606A",
+  "order": 2,
   "default_value": 0.0,
   "gain_multiplier": 1.0,
   "decay_multiplier": 1.0,

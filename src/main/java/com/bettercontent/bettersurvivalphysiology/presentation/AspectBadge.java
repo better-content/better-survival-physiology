@@ -5,10 +5,9 @@ public record AspectBadge(String namespace, String path, int u, int v, int width
                           int textureWidth, int textureHeight) {
     public static AspectBadge of(AspectIdentity aspect) { return of(aspect, false); }
     public static AspectBadge of(AspectIdentity aspect, boolean spiceAvailable) {
-        if (aspect == AspectIdentity.ROBUSTNESS) { // Existing slot 5 now represents Spice, glyph U+E105.
+        if (aspect == AspectIdentity.ENDURANCE)
             return new AspectBadge(spiceAvailable ? "better_spicy_farmers" : "better_survival_physiology",
                     "textures/gui/spice_badge.png", 0, 0, 18, 18, 18, 18);
-        }
         return new AspectBadge("better_survival_physiology", "textures/gui/aspect_badges.png",
                 aspect.icon * 18, 0, 18, 18, 144, 18);
     }

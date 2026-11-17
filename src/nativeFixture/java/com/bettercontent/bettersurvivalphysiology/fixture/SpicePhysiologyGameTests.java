@@ -2,8 +2,10 @@ package com.bettercontent.bettersurvivalphysiology.fixture;
 
 import com.bettercontent.bettersurvivalphysiology.SystemicSalienceMod;
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicStateStore;
+import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicMath;
 import com.bettercontent.bettersurvivalphysiology.nutrition.DietBridge;
 import com.bettercontent.bettersurvivalphysiology.nutrition.NutritionSnapshot;
+import com.illusivesoulworks.diet.common.data.group.DietGroups;
 import com.bettercontent.betterspicyfarmers.cultivation.CultivationContent;
 import com.bettercontent.betterspicyfarmers.runtime.SpiceRuntime;
 import com.bettercontent.betterspicyfarmers.runtime.SpiceRuntimeConfig;
@@ -64,13 +66,48 @@ public final class SpicePhysiologyGameTests {
             var n = DietBridge.snapshot(p);
             near(h, n.spice(), 0, "Old Earth payload never creates Spice");
             near(h, n.proteins(), .31, "Flesh survives native migration");
-            near(h, n.grains(), .42, "Grain survives native migration");
-            near(h, n.fruits(), .53, "Fruit survives native migration");
-            near(h, n.fats(), .64, "Tallow survives native migration");
-            near(h, n.dairy(), .75, "Cream survives native migration");
+            near(h, n.carbs(), 0, "Retired grain/fruit keys do not silently populate canonical Carbs");
+            near(h, n.vegetables(), .95, "Existing native Vegetable value is retained");
+            near(h, n.alcohol(), 0, "Old retired payload cannot synthesize optional Alcohol");
+            h.assertTrue(diet.getValues().keySet().equals(com.bettercontent.bettersurvivalphysiology.nutrition.NativeDietRoster.GROUPS),
+                    "Native Diet discards retired keys from effective tracker; no automatic migration");
             diet.setValue("spice", .36f);
             CompoundTag saved = new CompoundTag(); diet.save(saved); diet.load(saved);
             near(h, DietBridge.snapshot(p).spice(), .36, "New Spice persists in its own key");
+            f.succeed();
+        });
+    }
+
+    @GameTest(templateNamespace = SystemicSalienceMod.MOD_ID, template = "empty", timeoutTicks = 400)
+    public static void nativeHungerDecayCannotDoubleTimedCarbsOrAlcohol(GameTestHelper h) {
+        // Reuse this suite's already-registered ServerPlayer/EmbeddedChannel transport;
+        // Diet's original native decay sends a group-sync packet EVEN at zero ordinary
+        // balances, since exp(0)*positive multiplier is still a positive subtraction.
+        withPlayer(h, 380, f -> {
+            var p = f.player;
+            var tracker = DietBridge.tracker(p).orElseThrow();
+            h.assertTrue(DietGroups.getGroup(p.level(), "carbs").orElseThrow().getDecayMultiplier() == 0
+                    && DietGroups.getGroup(p.level(), "alcohol").orElseThrow().getDecayMultiplier() == 0,
+                    "Loaded native Carbs and Alcohol multipliers must be zero");
+            for (String ordinary : List.of("proteins", "spice", "vegetables"))
+                h.assertTrue(DietGroups.getGroup(p.level(), ordinary).orElseThrow().getDecayMultiplier() > 0,
+                        "Ordinary group retains native hunger decay: " + ordinary);
+            tracker.setValue("proteins", .80f); // Positive ordinary witness: native decay must run.
+            tracker.setValue("carbs", .80f); tracker.setValue("alcohol", .60f);
+            p.getFoodData().setFoodLevel(20);
+            tracker.tick(); // Real Diet tracker establishes prevFood=20.
+            float beforeProtein = tracker.getValue("proteins");
+            p.getFoodData().setFoodLevel(19);
+            tracker.tick(); // Real Diet hunger decay, including its real packet sync.
+            h.assertTrue(tracker.getValue("proteins") < beforeProtein,
+                    "Actual native hunger decay decreased positive Protein witness");
+            near(h, tracker.getValue("carbs"), .80, "Native hunger decay cannot additionally debit Carbs");
+            near(h, tracker.getValue("alcohol"), .60, "Native hunger decay cannot additionally debit Alcohol");
+            DietBridge.tickTimed(p); // Single Physiology clock step writes into same native tracker.
+            near(h, tracker.getValue("carbs"), MetabolicMath.tickSugar(.80),
+                    "Exactly one native-backed Carb timed change after native hunger decay");
+            near(h, tracker.getValue("alcohol"), MetabolicMath.tickAlcohol(.60, .80),
+                    "Exactly one native-backed Alcohol timed change after native hunger decay");
             f.succeed();
         });
     }
@@ -80,7 +117,7 @@ public final class SpicePhysiologyGameTests {
         withPlayer(h, 380, f -> {
             var p = f.player;
             var diet = DietBridge.tracker(p).orElseThrow();
-            MetabolicStateStore.get(p).alcohol = .9; // Original physiological setup, not a damage mock.
+            diet.setValue("alcohol", .9f); // Real native tracker setup, not a damage mock.
             finish(f, paid -> {
                 near(h, paid.spice(), .20, "Canonical native Diet awards precisely .20 for one chilli");
                 paidCost(f, paid, 0, 4, "Booze does not reduce native serving cost");
@@ -205,7 +242,7 @@ public final class SpicePhysiologyGameTests {
         public void finished(LivingEntityUseItemEvent.Finish event) {
             if (event.getEntity() == f.player && event.getItem().is(CultivationContent.item("chilli"))) f.capture(() ->
                     finishes.add(new Finish(f.player.getHealth(), DietBridge.snapshot(f.player).spice(), hits.size(),
-                            MetabolicStateStore.get(f.player).alcohol)));
+                            DietBridge.snapshot(f.player).alcohol())));
         }
         @SubscribeEvent(priority = EventPriority.LOWEST)
         public void healed(LivingHealEvent event) {

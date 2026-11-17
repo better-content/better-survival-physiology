@@ -1,6 +1,6 @@
 package com.bettercontent.bettersurvivalphysiology.metabolism;
 
-import com.bettercontent.bettersurvivalphysiology.presentation.AspectIdentity;
+import com.bettercontent.bettersurvivalphysiology.nutrition.NativeDietRoster;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 
@@ -16,25 +16,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DietMetabolicGroupsTest {
     @Test
-    void optionalMetabolicGroupsAppearInTheNativeSuiteWithoutGenericEffects() throws Exception {
+    void exactlyFiveCanonicalGroupsAreAuthoredWithoutGenericEffects() throws Exception {
         var suite = json("/data/diet/diet/suites/builtin.json");
         Set<String> groups = new HashSet<>();
         suite.getAsJsonArray("groups").forEach(group -> groups.add(group.getAsString()));
-        assertEquals(Set.of("proteins", "grains", "fruits", "vegetables", "spice", "dairy", "sugars", "alcohol"), groups);
+        assertEquals(NativeDietRoster.GROUPS, groups);
         assertTrue(suite.getAsJsonArray("effects").isEmpty());
-        assertEquals(AspectIdentity.TEMPO, AspectIdentity.fromGroupName("diet:sugars"));
-        assertEquals(AspectIdentity.CONTROL, AspectIdentity.fromGroupName("diet:alcohol"));
-        for (AspectIdentity aspect : AspectIdentity.values()) {
-            String group = aspect.representative;
-            var definition = json("/data/diet/diet/groups/" + group + ".json");
-            assertEquals(aspect.icon, definition.get("order").getAsInt());
-            assertEquals(String.format("#%06X", aspect.color), definition.get("color").getAsString());
-            if (group.equals("spice")) {
-                assertEquals("minecraft:blaze_powder", definition.get("icon").getAsString());
-                assertEquals(0.0, definition.get("default_value").getAsDouble());
-                assertEquals(1.0, definition.get("decay_multiplier").getAsDouble());
-            }
+        String[] ordered = {"proteins", "carbs", "spice", "vegetables", "alcohol"};
+        for (int index = 0; index < ordered.length; index++) {
+            var definition = json("/data/diet/diet/groups/" + ordered[index] + ".json");
+            assertEquals(index, definition.get("order").getAsInt());
+            assertEquals(0.0, definition.get("default_value").getAsDouble());
+            assertEquals(ordered[index].equals("carbs") || ordered[index].equals("alcohol") ? 0.0 : 1.0,
+                    definition.get("decay_multiplier").getAsDouble(), "Timed groups cannot have native decay");
         }
+        assertEquals("minecraft:blaze_powder", json("/data/diet/diet/groups/spice.json")
+                .get("icon").getAsString());
     }
 
     @Test

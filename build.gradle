@@ -104,16 +104,22 @@ def beverageDependency = "bettercontent.beverage.local:better-drinking-water:${b
 // classes are an explicit compile-only snapshot, never a covert provider rollout.
 def spicyOverride = providers.gradleProperty('spicyFarmersProviderJar').orNull
 def typedWaterOverride = providers.gradleProperty('typedWaterCompileClasses').orNull
+def typedSpiceOverride = providers.gradleProperty('typedSpiceCompileClasses').orNull
 if (spicyOverride == null || spicyOverride.isBlank())
     throw new GradleException('Bind source-tested Spice provider via -PspicyFarmersProviderJar=...')
 if (typedWaterOverride == null || typedWaterOverride.isBlank())
     throw new GradleException('Bind actual nonshipping Water API classes via -PtypedWaterCompileClasses=...')
+if (typedSpiceOverride == null || typedSpiceOverride.isBlank())
+    throw new GradleException('Bind actual nonshipping Spice placed-event classes via -PtypedSpiceCompileClasses=...')
 def spicyInput = file(spicyOverride)
 def typedWaterClasses = file(typedWaterOverride)
+def typedSpiceClasses = file(typedSpiceOverride)
 if (!spicyInput.isFile() || !typedWaterClasses.isDirectory()
         || !new File(typedWaterClasses, 'com/bettercontent/betterdrinkingwater/PlantDrinks.class').isFile()
-        || !new File(typedWaterClasses, 'com/bettercontent/betterdrinkingwater/api/BeverageEvents.class').isFile())
-    throw new GradleException('Missing explicit real Spice JAR or typed Water compile-only class snapshot')
+        || !new File(typedWaterClasses, 'com/bettercontent/betterdrinkingwater/api/BeverageEvents.class').isFile()
+        || !typedSpiceClasses.isDirectory()
+        || !new File(typedSpiceClasses, 'com/bettercontent/betterspicyfarmers/api/event/NativePlacedServingEvent.class').isFile())
+    throw new GradleException('Missing explicit real Spice JAR or typed Water/Spice compile-only class snapshot')
 def spicyBytes = spicyInput.bytes
 def spicyHash = java.security.MessageDigest.getInstance('SHA-256').digest(spicyBytes).encodeHex().toString()
 def spicyDirectory = file(".gradle/spice-provider/${spicyHash}")
@@ -151,6 +157,7 @@ dependencies {
     runtimeOnly fg.deobf(beverageDependency)
     compileOnly files(typedWaterClasses)
     compileOnly fg.deobf(spicyDependency)
+    compileOnly files(typedSpiceClasses)
     // Gradle does not inherit main compileOnly into test/nativeFixture compile classpaths.
     // Explicitly bind identical providers; only the nonshipping fixture runtime gets Spice.
     testCompileOnly fg.deobf(spicyDependency)
@@ -158,6 +165,7 @@ dependencies {
     nativeFixtureCompileOnly fg.deobf(spicyDependency)
     nativeFixtureCompileOnly fg.deobf(beverageDependency)
     nativeFixtureCompileOnly files(typedWaterClasses)
+    nativeFixtureCompileOnly files(typedSpiceClasses)
     nativeFixtureRuntimeOnly fg.deobf(spicyDependency)
 
     // Exact core native-provider fixture dependencies; no unrelated optional integrations.

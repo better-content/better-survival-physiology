@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "#diet:grains",
+    "#diet:fruits",
+    "#diet:sugars",
+    "#diet:dairy"
+  ]
+}

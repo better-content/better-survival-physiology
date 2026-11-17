@@ -1,72 +1,97 @@
 package com.bettercontent.bettersurvivalphysiology.nutrition;
 
 import com.bettercontent.bettersurvivalphysiology.SystemicSalienceMod;
-import com.illusivesoulworks.diet.api.DietApi;
-import com.illusivesoulworks.diet.api.DietEvent;
+import com.bettercontent.bettersurvivalphysiology.network.DietDairySyncPacket;
+import com.bettercontent.bettersurvivalphysiology.network.SalienceNetwork;
+import com.illusivesoulworks.diet.api.type.IDietTracker;
 import com.illusivesoulworks.diet.common.data.group.DietGroups;
 import com.illusivesoulworks.diet.common.data.suite.DietSuites;
-import com.mojang.logging.LogUtils;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.OnDatapackSyncEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import org.slf4j.Logger;
 
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** Diet's data define nutrition; never let a group missing from its active suite reach native apply(). */
+/** Invalid native registry/suite/tracker data is a configuration error, never an award to
+ * silently discard. Do NOT call DietApi.get() from a preconsume guard: the optional Spice
+ * integration decorates that lookup once and could claim a dose before real consumption. */
 @Mod.EventBusSubscriber(modid = SystemicSalienceMod.MOD_ID)
 public final class DietAwardGuard {
-    private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Set<String> EXPECTED = Set.of(
-            "proteins", "sugars", "grains", "fruits", "vegetables", "spice", "dairy", "alcohol");
     private DietAwardGuard() {}
 
-    @SubscribeEvent
-    public static void started(ServerStartedEvent event) { validate(event.getServer()); }
-
-    @SubscribeEvent
-    public static void reloaded(OnDatapackSyncEvent event) {
-        if (event.getPlayer() == null) validate(event.getPlayerList().getServer());
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void started(ServerStartedEvent event) {
+        validate(event.getServer());
+        DietDairySplit.refreshServer();
+        event.getServer().getPlayerList().getPlayers().forEach(DietAwardGuard::validateTracker);
     }
 
-    private static void validate(MinecraftServer server) {
-        var level = server.overworld();
-        var suite = DietSuites.getSuite(level, "builtin");
-        var defined = DietGroups.getGroups(level).stream().map(g -> g.getName()).collect(Collectors.toSet());
-        var active = suite.map(s -> s.getGroups().stream().map(g -> g.getName()).collect(Collectors.toSet())).orElse(Set.of());
-        if (!defined.equals(EXPECTED) || !active.equals(EXPECTED))
-            LOGGER.error("Diet roster mismatch: defined={}, active={}, expected={}; unmatched food awards are blocked. Install matching Diet/Physiology pack resources before play.", defined, active, EXPECTED);
-        var inactive = DietGroups.getGroups(level).stream().filter(g -> !active.contains(g.getName())).toList();
-        if (!inactive.isEmpty()) {
-            var examples = BuiltInRegistries.ITEM.stream().filter(item -> new net.minecraft.world.item.ItemStack(item).isEdible())
-                    .filter(item -> inactive.stream().anyMatch(g -> g.contains(new net.minecraft.world.item.ItemStack(item))))
-                    .limit(20).map(BuiltInRegistries.ITEM::getKey).toList();
-            LOGGER.error("Diet groups outside active suite can classify edible items (first 20): {}", examples);
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void reloaded(OnDatapackSyncEvent event) {
+        MinecraftServer server = event.getPlayerList().getServer();
+        validate(server);
+        // LOWEST runs after pinned DietEvents.syncDatapack: the native generator has just
+        // rebuilt its trails; its group packet carried GENERATED group names, not trails.
+        DietDairySyncPacket classification = DietDairySyncPacket.fromNative();
+        if (event.getPlayer() != null) {
+            SalienceNetwork.syncDerivedDairy(event.getPlayer(), classification);
+            return;
+        }
+        // Diet's tracker may have retained values from the previous suite across reload.
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            tracker(player).initSuite();
+            validateTracker(player);
+            tracker(player).sync();
+            SalienceNetwork.syncDerivedDairy(player, classification);
         }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void preventUnsupportedAward(DietEvent.ConsumeItemStack event) {
-        var player = event.getEntity();
-        if (player.level().isClientSide()) return;
-        var diet = DietBridge.tracker(player);
-        if (diet.isEmpty() || !diet.get().isActive()) return;
-        try {
-            var result = DietApi.getInstance().get(player, event.getStack()).get();
-            var available = diet.get().getValues().keySet();
-            var unknown = result.keySet().stream().map(g -> g.getName())
-                    .filter(name -> !available.contains(name)).collect(Collectors.toSet());
-            if (unknown.isEmpty()) return;
-            LOGGER.error("Blocked Diet award for {}: unknown groups {} are not in active suite {}. Correct the group data; do not silently drop an ingredient.",
-                    BuiltInRegistries.ITEM.getKey(event.getStack().getItem()), unknown, available);
-        } catch (RuntimeException failure) {
-            LOGGER.error("Blocked unresolved Diet award for {}", BuiltInRegistries.ITEM.getKey(event.getStack().getItem()), failure);
+    public static void joined(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) validateTracker(player);
+    }
+
+    public static void validate(MinecraftServer server) {
+        var level = server.overworld();
+        var suite = DietSuites.getSuite(level, "builtin").orElseThrow(() ->
+                new IllegalStateException("Diet config error: builtin suite missing"));
+        var defined = DietGroups.getGroups(level).stream().map(g -> g.getName()).collect(Collectors.toSet());
+        var active = suite.getGroups().stream().map(g -> g.getName()).collect(Collectors.toSet());
+        validateRoster(defined, active);
+        for (var group : DietGroups.getGroups(level)) {
+            double multiplier = group.getDecayMultiplier();
+            boolean timed = group.getName().equals("carbs") || group.getName().equals("alcohol");
+            if (!Double.isFinite(multiplier) || (timed ? multiplier != 0.0 : multiplier <= 0.0))
+                throw new IllegalStateException("Diet config error: " + group.getName()
+                        + " decay_multiplier=" + multiplier + (timed ? " (requires zero; native clock owns decay)" : " (requires positive)"));
         }
-        event.setCanceled(true);
+    }
+
+    public static void validateRoster(Set<String> defined, Set<String> active) {
+        if (!defined.equals(NativeDietRoster.GROUPS) || !active.equals(NativeDietRoster.GROUPS))
+            throw new IllegalStateException("Diet config error: defined=" + defined + ", active=" + active
+                    + ", expected exactly=" + NativeDietRoster.GROUPS + ". Correct the data pack before play.");
+    }
+
+    public static void validateTracker(ServerPlayer player) {
+        IDietTracker tracker = tracker(player);
+        validateRoster(DietGroups.getGroups(player.level()).stream().map(g -> g.getName()).collect(Collectors.toSet()),
+                DietSuites.getSuite(player.level(), tracker.getSuite()).orElseThrow(() ->
+                        new IllegalStateException("Diet config error: missing player suite " + tracker.getSuite()))
+                        .getGroups().stream().map(g -> g.getName()).collect(Collectors.toSet()));
+        if (!tracker.getSuite().equals("builtin") || !tracker.getValues().keySet().equals(NativeDietRoster.GROUPS))
+            throw new IllegalStateException("Diet config error: player " + player.getUUID() + " suite="
+                    + tracker.getSuite() + ", tracker=" + tracker.getValues().keySet());
+    }
+
+    private static IDietTracker tracker(ServerPlayer player) {
+        return DietBridge.tracker(player).orElseThrow(() ->
+                new IllegalStateException("Diet config error: missing tracker for " + player.getUUID()));
     }
 }

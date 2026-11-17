@@ -1,12 +1,13 @@
 package com.bettercontent.bettersurvivalphysiology.presentation;
 
+import com.bettercontent.bettersurvivalphysiology.nutrition.ServingVectors;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** Per-serving gains, not the player's current totals. Diet owns the ordinary six. */
+/** One canonical serving vector; Sugar/Alcohol are never hidden second balances. */
 public final class FoodNutrients {
     public record Entry(AspectIdentity aspect, double gain) {
         public String percentage() {
@@ -18,19 +19,20 @@ public final class FoodNutrients {
 
     private FoodNutrients() {}
 
-    public static List<Entry> entries(Map<String, Double> dietGains, double sugar, double alcohol, boolean milk) {
+    /** The supplemental scalars describe only paid contributions absent from native results.
+     * Existing canonical Carbs/Alcohol gains always win, preventing preview double counting. */
+    public static List<Entry> entries(Map<String, Double> canonical, double optionalCarbs,
+                                      double optionalAlcohol, boolean milk) {
         Map<AspectIdentity, Double> gains = new EnumMap<>(AspectIdentity.class);
-        dietGains.forEach((name, gain) -> {
+        canonical.forEach((name, gain) -> {
             AspectIdentity identity = AspectIdentity.fromGroupName(name);
-            if (identity != null && identity != AspectIdentity.TEMPO && identity != AspectIdentity.CONTROL)
-                gains.merge(identity, gain, Double::sum);
+            if (identity != null) gains.merge(identity, gain, Double::sum);
         });
-        // These loads are awarded by the consumption handler, not Diet's food calculation.
-        gains.put(AspectIdentity.TEMPO, sugar);
-        gains.put(AspectIdentity.CONTROL, alcohol);
+        if (!canonical.containsKey("carbs") && optionalCarbs > 0) gains.put(AspectIdentity.MOTION, optionalCarbs);
+        if (!canonical.containsKey("alcohol") && optionalAlcohol > 0) gains.put(AspectIdentity.CONTROL, optionalAlcohol);
         if (milk) {
-            gains.put(AspectIdentity.RENEWAL, 0.06);
-            // Milk is a Dairy award, not Vegetable nutrition.
+            ServingVectors.milk().gains().forEach((group, dose) ->
+                    gains.merge(AspectIdentity.fromGroupName(group), dose, Double::sum));
         }
         List<Entry> entries = new ArrayList<>();
         for (AspectIdentity identity : AspectIdentity.values()) {

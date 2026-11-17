@@ -6,8 +6,8 @@ import com.bettercontent.bettersurvivalphysiology.nutrition.NutritionSnapshot;
 import com.bettercontent.bettersurvivalphysiology.runtime.HeavyBlow;
 import net.minecraft.server.level.ServerPlayer;
 
+// workSequence is a reserved wire slot, always zero; no work-sequence gameplay state remains.
 public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSeconds,
-                                   int sugarSeconds, int alcoholSeconds,
                                    float ordinary, float prepared, float feast) {
     public static PresentationSnapshot create(ServerPlayer player, NutritionSnapshot nutrition, MetabolicState state) {
         double ordinary = SalienceConfig.FIRST;
@@ -17,24 +17,27 @@ public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSe
         if (HeavyBlow.ready(nutrition.proteins(), prepared, state.heavyBlowCooldown,
                 player.level().getGameTime(), state.lastAttackTick,
                 player.getAttackStrengthScale(0.5f), state.blackout)) flags |= PresentationFlags.IMPACT_READY;
-        if (nutrition.fruits() >= SalienceConfig.SECOND && state.sprintTicks >= 60) flags |= PresentationFlags.MOBILITY_STRIDE;
-        if (nutrition.vegetables() >= feast && state.enduranceReserveCooldown == 0) flags |= PresentationFlags.ENDURANCE_READY;
+        if (nutrition.spice() >= feast && state.enduranceReserveCooldown == 0) flags |= PresentationFlags.ENDURANCE_READY;
         if (state.enduranceReserveTicks > 0) flags |= PresentationFlags.ENDURANCE_ACTIVE;
-        if (nutrition.dairy() >= feast && state.dairyCleanseCooldown == 0) flags |= PresentationFlags.RENEWAL_READY;
-        if (state.sugar > 0.01) flags |= PresentationFlags.TEMPO_ONE;
+        if (nutrition.vegetables() >= feast && state.dairyCleanseCooldown == 0) flags |= PresentationFlags.RENEWAL_READY;
+        if (nutrition.carbs() > 0.01) flags |= PresentationFlags.TEMPO_ONE;
         if (state.blackout) flags |= PresentationFlags.CONTROL_BLACKOUT;
-        if (state.alcohol > 0.30) flags |= PresentationFlags.CONTROL_IMPAIRED;
+        if (nutrition.alcohol() > 0.30) flags |= PresentationFlags.CONTROL_IMPAIRED;
 
-        double[] values = {nutrition.proteins(), nutrition.grains(), nutrition.fruits(), nutrition.vegetables(), nutrition.spice(), nutrition.dairy()};
+        double[] values = {nutrition.proteins(), nutrition.carbs(), nutrition.spice(),
+                nutrition.vegetables(), nutrition.alcohol()};
         int[] estimates = new int[values.length];
-        AspectIdentity[] aspects = {AspectIdentity.IMPACT, AspectIdentity.WORK, AspectIdentity.MOBILITY,
-                AspectIdentity.ENDURANCE, AspectIdentity.ROBUSTNESS, AspectIdentity.RENEWAL};
+        AspectIdentity[] aspects = AspectIdentity.values();
         for (int index = 0; index < values.length; index++) {
-            double floor = DietBenefits.activePerkFloor(aspects[index], values[index]);
-            estimates[index] = floor > 0 ? NutritionEstimates.nutrientSeconds(values[index], floor, state.sugar) : -1;
+            if (aspects[index] == AspectIdentity.MOTION) {
+                estimates[index] = NutritionEstimates.sugarSeconds(values[index]);
+            } else if (aspects[index] == AspectIdentity.CONTROL) {
+                estimates[index] = NutritionEstimates.alcoholSeconds(values[index], nutrition.carbs());
+            } else {
+                double floor = DietBenefits.activePerkFloor(aspects[index], values[index]);
+                estimates[index] = floor > 0 ? NutritionEstimates.nutrientSeconds(values[index], floor, nutrition.carbs()) : -1;
+            }
         }
-        return new PresentationSnapshot(flags, state.workSequence, estimates,
-                NutritionEstimates.sugarSeconds(state.sugar),
-                NutritionEstimates.alcoholSeconds(state.alcohol, state.sugar), (float) ordinary, (float) prepared, (float) feast);
+        return new PresentationSnapshot(flags, 0, estimates, (float) ordinary, (float) prepared, (float) feast);
     }
 }

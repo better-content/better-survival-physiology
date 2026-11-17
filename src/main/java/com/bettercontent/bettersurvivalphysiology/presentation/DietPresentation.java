@@ -1,6 +1,7 @@
 package com.bettercontent.bettersurvivalphysiology.presentation;
 
 import com.bettercontent.bettersurvivalphysiology.nutrition.DietBridge;
+import com.bettercontent.bettersurvivalphysiology.nutrition.NativeDietRoster;
 import com.illusivesoulworks.diet.common.data.suite.DietSuites;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -21,8 +22,9 @@ public final class DietPresentation {
         return DietBridge.tracker(player).flatMap(tracker ->
                 DietSuites.getSuite(player.level(), tracker.getSuite()).flatMap(suite -> {
                     var values = tracker.getValues();
-                    if (suite.getGroups().isEmpty() || suite.getGroups().stream().anyMatch(g -> !values.containsKey(g.getName())))
-                        return Optional.empty();
+                    if (!values.keySet().equals(NativeDietRoster.GROUPS)
+                            || !suite.getGroups().stream().map(g -> g.getName()).collect(java.util.stream.Collectors.toSet())
+                                    .equals(NativeDietRoster.GROUPS)) return Optional.empty();
                     return Optional.of(suite.getGroups().stream()
                             .sorted(Comparator.comparingInt(com.illusivesoulworks.diet.api.type.IDietGroup::getOrder)
                                     .thenComparing(com.illusivesoulworks.diet.api.type.IDietGroup::getName))

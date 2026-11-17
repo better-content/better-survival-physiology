@@ -26,11 +26,11 @@ public final class GameplayHooks {
     private static float costMultiplier(ServerPlayer player) {
         MetabolicState state = MetabolicStateStore.get(player);
         NutritionSnapshot nutrition = DietBridge.snapshot(player);
-        double vegetables = nutrition.actual(NutritionSnapshot.Group.VEGETABLES);
-        double savings = NutritionEffects.resourceSavings(vegetables, state.sugar);
+        double carbs = nutrition.carbs();
+        double savings = NutritionEffects.resourceSavings(nutrition.spice(), carbs);
         double ordinary = state.enduranceReserveTicks > 0 ? 0.0 : 1.0 - savings;
-        // Sugar is a separate surcharge: Vegetable nutrition and its emergency reserve cannot erase it.
-        return (float) (ordinary + MetabolicMath.sugarDrain(state.sugar) - 1.0
-                + 2.0 * MetabolicMath.alcoholImpairment(state.alcohol, state.sugar));
+        // Carbs expenditure and Alcohol impairment remain costs; Deep Reserve cannot erase them.
+        return (float) (ordinary + MetabolicMath.sugarDrain(carbs) - 1.0
+                + 2.0 * MetabolicMath.alcoholImpairment(nutrition.alcohol(), carbs));
     }
 }

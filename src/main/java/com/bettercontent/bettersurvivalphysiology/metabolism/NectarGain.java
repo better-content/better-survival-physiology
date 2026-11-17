@@ -5,7 +5,9 @@ import java.util.Set;
 
 /** Potential whole-serving gains, independent of current tracker levels and saturation. */
 public final class NectarGain {
-    private static final Set<String> LASTING = Set.of("proteins", "grains", "fruits", "vegetables", "spice", "dairy");
+    // Input is the native potential serving, never legacy source tags. Alcohol is
+    // optional and must not cap a lasting food gain or become a second award.
+    private static final Set<String> LASTING = Set.of("proteins", "carbs", "vegetables", "spice");
 
     private NectarGain() {}
 

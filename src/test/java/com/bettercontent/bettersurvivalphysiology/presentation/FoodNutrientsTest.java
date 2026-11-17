@@ -16,17 +16,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class FoodNutrientsTest {
     @Test
     void nativeGainsUsePackNamesAndStableHorizontalOrder() {
-        var entries = FoodNutrients.entries(Map.of("diet:proteins", .025, "fruits", .06, "grains", .1), .06, 0, false);
-        assertEquals(List.of("Protein", "Sugar", "Grains", "Fruit"),
-                entries.stream().map(entry -> entry.aspect().displayName).toList());
-        assertEquals(List.of("+2.5%", "+6%", "+10%", "+6%"),
-                entries.stream().map(FoodNutrients.Entry::percentage).toList());
+        var entries = FoodNutrients.entries(Map.of("diet:proteins", .025, "carbs", .1), .06, 0, false);
+        assertEquals(List.of("Protein", "Carbs"), entries.stream().map(entry -> entry.aspect().displayName).toList());
+        assertEquals(List.of("+2.5%", "+10%"), entries.stream().map(FoodNutrients.Entry::percentage).toList());
     }
 
     @Test
     void allPackNamesMatchDietLabelsAndKeepNativeGroupIdentities() throws Exception {
-        var labels = List.of("Protein", "Sugar", "Grains", "Fruit", "Vegetables", "Spice", "Dairy", "Alcohol");
-        var groups = List.of("proteins", "sugars", "grains", "fruits", "vegetables", "spice", "dairy", "alcohol");
+        var labels = List.of("Protein", "Carbs", "Spice", "Vegetables", "Alcohol");
+        var groups = List.of("proteins", "carbs", "spice", "vegetables", "alcohol");
         var aspects = AspectIdentity.values();
         var language = JsonParser.parseString(Files.readString(
                 Path.of("src/main/resources/assets/diet/lang/en_us.json"))).getAsJsonObject();
@@ -34,7 +32,7 @@ class FoodNutrientsTest {
         for (int index = 0; index < aspects.length; index++) {
             var aspect = aspects[index];
             String group = groups.get(index);
-            assertEquals(index, aspect.icon);
+            assertEquals(new int[]{0, 3, 5, 4, 7}[index], aspect.icon);
             assertEquals(group, aspect.representative);
             assertSame(aspect, AspectIdentity.fromGroupName(group));
             assertSame(aspect, AspectIdentity.fromGroupName("diet:" + group));
@@ -43,32 +41,32 @@ class FoodNutrientsTest {
     }
 
     @Test
-    void allEightServingGainsKeepTheirValuesAndOrder() {
-        var entries = FoodNutrients.entries(Map.of("proteins", .01, "grains", .03, "fruits", .04,
-                "vegetables", .05, "spice", .06, "dairy", .07), .02, .08, false);
+    void allFiveNativeServingGainsKeepTheirValuesAndOrder() {
+        var entries = FoodNutrients.entries(Map.of("proteins", .01, "carbs", .02,
+                "spice", .03, "vegetables", .04, "alcohol", .05), .02, .08, false);
         assertEquals(List.of(AspectIdentity.values()), entries.stream().map(FoodNutrients.Entry::aspect).toList());
-        assertEquals(List.of("+1%", "+2%", "+3%", "+4%", "+5%", "+6%", "+7%", "+8%"),
+        assertEquals(List.of("+1%", "+2%", "+3%", "+4%", "+5%"),
                 entries.stream().map(FoodNutrients.Entry::percentage).toList());
     }
 
     @Test
-    void metabolicGainsReplaceDietValuesInsteadOfDoubleCounting() {
-        var entries = FoodNutrients.entries(Map.of("sugars", .01, "alcohol", .02), .34, .15, false);
-        assertEquals(List.of("+34%", "+15%"), entries.stream().map(FoodNutrients.Entry::percentage).toList());
+    void canonicalGainsOutrankOldMirrorScalarsInsteadOfDoubleCounting() {
+        var entries = FoodNutrients.entries(Map.of("carbs", .01, "alcohol", .02), .34, .15, false);
+        assertEquals(List.of("+1%", "+2%"), entries.stream().map(FoodNutrients.Entry::percentage).toList());
         assertTrue(FoodNutrients.entries(Map.of("sugars", .1), 0, 0, false).isEmpty());
     }
 
     @Test
     void milkMatchesTheNativeConsumptionAward() {
         var entries = FoodNutrients.entries(Map.of(), 0, 0, true);
-        assertEquals(List.of(AspectIdentity.RENEWAL),
+        assertEquals(List.of(AspectIdentity.POWER, AspectIdentity.MOTION),
                 entries.stream().map(FoodNutrients.Entry::aspect).toList());
-        assertEquals(List.of("+6%"), entries.stream().map(FoodNutrients.Entry::percentage).toList());
+        assertEquals(List.of("+4.8%", "+1.2%"), entries.stream().map(FoodNutrients.Entry::percentage).toList());
     }
 
     @Test
     void zeroInvalidAndUnknownGainsAreOmittedButTracesRemainVisible() {
-        var entries = FoodNutrients.entries(Map.of("proteins", 0.00001, "grains", 0.0,
+        var entries = FoodNutrients.entries(Map.of("proteins", 0.00001, "carbs", 0.0,
                 "fruits", -1.0, "dairy", Double.NaN, "fats", Double.POSITIVE_INFINITY, "unknown", .5), 0, 0, false);
         assertEquals(1, entries.size());
         assertEquals("+<0.1%", entries.get(0).percentage());

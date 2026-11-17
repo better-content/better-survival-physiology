@@ -13,5 +13,6 @@ public final class ClientStateEvents {
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientMetabolicState.reset();
+        com.bettercontent.bettersurvivalphysiology.nutrition.DietDairySplit.clearClient();
     }
 }

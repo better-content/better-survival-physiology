@@ -28,6 +28,8 @@ public final class ModSounds {
     private ModSounds() {}
 
     public static void register(IEventBus bus) { SOUNDS.register(bus); }
-    public static SoundEvent get(AspectIdentity aspect) { return ASPECTS.get(aspect).get(); }
-    public static SoundEvent brokenTempo() { return BROKEN_TEMPO.get(); }
+    public static SoundEvent get(AspectIdentity group) {
+        return ASPECTS.get(group).get();
+    }
+    public static SoundEvent brokenTempo() { return get(AspectIdentity.TEMPO); }
 }

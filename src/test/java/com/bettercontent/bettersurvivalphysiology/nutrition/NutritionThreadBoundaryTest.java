@@ -10,29 +10,29 @@ final class NutritionThreadBoundaryTest {
     private static final double ORDINARY = 0.50;
 
     @Test
-    void anyLowOrdinaryGroupMakesNutritionLow() {
-        NutritionSnapshot lowDairy = new NutritionSnapshot(.75f, .75f, .75f, .75f, .75f, .49f);
-
-        assertTrue(NutritionThreadBoundary.isNutritionLow(lowDairy, ORDINARY));
-        assertFalse(NutritionThreadBoundary.isBalanced(lowDairy, ORDINARY));
+    void anyLowNourishingGroupMakesNutritionLow() {
+        NutritionSnapshot lowVegetables = new NutritionSnapshot(.75f, .75f, .75f, .49f, 1f);
+        assertTrue(NutritionThreadBoundary.isNutritionLow(lowVegetables, ORDINARY));
+        assertFalse(NutritionThreadBoundary.isBalanced(lowVegetables, ORDINARY));
     }
 
     @Test
-    void allSixGroupsAtThresholdQualifyAsBalanced() {
-        NutritionSnapshot boundary = new NutritionSnapshot(.50f, .50f, .50f, .50f, .50f, .50f);
-
+    void allFourNourishingGroupsAtThresholdQualifyWithZeroAlcohol() {
+        NutritionSnapshot boundary = new NutritionSnapshot(.50f, .50f, .50f, .50f, 0);
         assertFalse(NutritionThreadBoundary.isNutritionLow(boundary, ORDINARY));
         assertTrue(NutritionThreadBoundary.isBalanced(boundary, ORDINARY));
+        assertTrue(NutritionThreadBoundary.isBalanced(new NutritionSnapshot(.50f, .50f, .50f, .50f, 1f), ORDINARY));
     }
 
     @Test
-    void recoveryMustCrossFromLowToAllSixBalanced() {
-        NutritionSnapshot low = new NutritionSnapshot(.75f, .75f, .75f, .75f, .75f, .49f);
-        NutritionSnapshot balanced = new NutritionSnapshot(.75f, .75f, .75f, .75f, .75f, .50f);
-
+    void recoveryCrossesFromLowToFourBalancedWithoutRequiringAlcohol() {
+        NutritionSnapshot low = new NutritionSnapshot(.75f, .75f, .75f, .49f, 0);
+        NutritionSnapshot balanced = new NutritionSnapshot(.75f, .75f, .75f, .50f, 0);
         assertTrue(NutritionThreadBoundary.isQualifyingRecovery(low, balanced, ORDINARY));
         assertFalse(NutritionThreadBoundary.isQualifyingRecovery(balanced, balanced, ORDINARY));
         assertFalse(NutritionThreadBoundary.isQualifyingRecovery(low, low, ORDINARY));
+        assertFalse(NutritionThreadBoundary.isQualifyingRecovery(balanced,
+                new NutritionSnapshot(.75f, .75f, .75f, .50f, 1f), ORDINARY));
     }
 
     @Test

@@ -1,5 +1,5 @@
 {
   "replace": true,
-  "groups": ["proteins", "sugars", "grains", "fruits", "vegetables", "spice", "dairy", "alcohol"],
+  "groups": ["proteins", "carbs", "spice", "vegetables", "alcohol"],
   "effects": []
 }

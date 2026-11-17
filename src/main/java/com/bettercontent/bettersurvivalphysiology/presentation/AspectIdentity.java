@@ -4,16 +4,22 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Locale;
 
+/** Five Diet food identities, each teaching its corresponding (secondary) shared aspect. */
 public enum AspectIdentity {
-    IMPACT(0, "proteins", "✦", "Protein", "meat, eggs, legumes", 0xFF4055),
-    TEMPO(1, "sugars", "»", "Sugar", "fruit, honey, sweets", 0x00A985),
-    WORK(2, "grains", "⚒", "Grains", "grain, bread, porridge", 0xF0E2C5),
-    MOBILITY(3, "fruits", "➜", "Fruit", "fruit, berries", 0xE0B01F),
-    ENDURANCE(4, "vegetables", "∞", "Vegetables", "vegetables, greens, roots", 0x52606A),
-    ROBUSTNESS(5, "spice", "◆", "Spice", "spices, seasoned foods", 0xD85C32),
-    RENEWAL(6, "dairy", "✚", "Dairy", "milk, cheese, cultured dairy", 0x6CCAF0),
-    CONTROL(7, "alcohol", "⊕", "Alcohol", "fermented drinks", 0x8E5BB7);
+    POWER(0, "proteins", "Protein", "meat, eggs, legumes", SalienceAspect.POWER),
+    MOTION(1, "carbs", "Carbs", "grain, fruit, honey, dairy", SalienceAspect.MOTION),
+    ENDURANCE(2, "spice", "Spice", "spices, seasoned foods", SalienceAspect.ENDURANCE),
+    RENEWAL(3, "vegetables", "Vegetables", "vegetables, greens, roots", SalienceAspect.RENEWAL),
+    CONTROL(4, "alcohol", "Alcohol", "fermented drinks (optional)", SalienceAspect.CONTROL);
 
+    // Binary/source compatibility for non-authoritative sound/feedback names. These are NOT
+    // additional enum values, Diet groups, tracker values, or independent nutrition balances.
+    @Deprecated public static final AspectIdentity IMPACT = POWER, WORK = POWER;
+    @Deprecated public static final AspectIdentity TEMPO = MOTION, MOBILITY = MOTION;
+    @Deprecated public static final AspectIdentity ROBUSTNESS = ENDURANCE;
+
+    private final int groupOrder;
+    public final SalienceAspect aspect;
     public final int icon;
     public final String representative;
     public final String glyph;
@@ -21,13 +27,15 @@ public enum AspectIdentity {
     public final String sources;
     public final int color;
 
-    AspectIdentity(int icon, String representative, String glyph, String displayName, String sources, int color) {
-        this.icon = icon;
+    AspectIdentity(int groupOrder, String representative, String displayName, String sources, SalienceAspect aspect) {
+        this.groupOrder = groupOrder;
+        this.aspect = aspect;
+        this.icon = aspect.badgeSlot;
         this.representative = representative;
-        this.glyph = glyph;
+        this.glyph = aspect.glyph;
         this.displayName = displayName;
         this.sources = sources;
-        this.color = color;
+        this.color = aspect.color;
     }
 
     public static AspectIdentity fromGroupName(String name) {
@@ -35,6 +43,6 @@ public enum AspectIdentity {
         return Arrays.stream(values()).filter(value -> value.representative.equals(normalized)).findFirst().orElse(null);
     }
 
-    public static Comparator<AspectIdentity> displayOrder() { return Comparator.comparingInt(value -> value.icon); }
+    public static Comparator<AspectIdentity> displayOrder() { return Comparator.comparingInt(value -> value.groupOrder); }
     public String badge() { return Character.toString(0xE100 + icon); }
 }

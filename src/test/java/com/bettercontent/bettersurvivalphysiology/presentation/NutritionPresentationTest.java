@@ -26,17 +26,18 @@ final class NutritionPresentationTest {
 
     @Test
     void aspectOrderAndDietIdentitiesAreExact() {
-        assertEquals(8, AspectIdentity.values().length);
-        assertEquals(AspectIdentity.IMPACT, AspectIdentity.fromGroupName("diet:PROTEINS"));
-        assertEquals(AspectIdentity.RENEWAL, AspectIdentity.fromGroupName("Dairy"));
-        assertEquals(AspectIdentity.ROBUSTNESS, AspectIdentity.fromGroupName("diet:spice"));
-        assertNull(AspectIdentity.fromGroupName("diet:earth"), "Legacy Earth must not alias or migrate into Spice");
-        assertEquals(AspectIdentity.ENDURANCE, AspectIdentity.fromGroupName("vegetables"), "Diet Vegetables owns the resource-savings aspect");
-        assertEquals("Spice", AspectIdentity.ROBUSTNESS.displayName);
-        assertArrayEquals(new int[]{0xFF4055, 0x00A985, 0xF0E2C5, 0xE0B01F, 0x52606A, 0xD85C32, 0x6CCAF0, 0x8E5BB7},
+        assertEquals(5, AspectIdentity.values().length);
+        assertEquals(AspectIdentity.POWER, AspectIdentity.fromGroupName("diet:PROTEINS"));
+        assertEquals(AspectIdentity.MOTION, AspectIdentity.fromGroupName("Carbs"));
+        assertEquals(AspectIdentity.ENDURANCE, AspectIdentity.fromGroupName("diet:spice"));
+        assertEquals(AspectIdentity.RENEWAL, AspectIdentity.fromGroupName("vegetables"));
+        assertEquals(AspectIdentity.CONTROL, AspectIdentity.fromGroupName("alcohol"));
+        for (String retired : new String[]{"earth", "grains", "fruits", "dairy", "sugars"})
+            assertNull(AspectIdentity.fromGroupName("diet:" + retired), "Retired source cannot masquerade as native group");
+        assertEquals("Spice", AspectIdentity.ENDURANCE.displayName);
+        assertArrayEquals(new int[]{0xFF4055, 0xE0B01F, 0x52606A, 0x6CCAF0, 0x8E5BB7},
                 java.util.Arrays.stream(AspectIdentity.values()).mapToInt(aspect -> aspect.color).toArray());
-        for (int index = 0; index < AspectIdentity.values().length; index++) {
-            assertEquals(index, AspectIdentity.values()[index].icon);
-        }
+        assertArrayEquals(new int[]{0, 3, 5, 4, 7},
+                java.util.Arrays.stream(AspectIdentity.values()).mapToInt(aspect -> aspect.icon).toArray());
     }
 }
