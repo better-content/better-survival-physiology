@@ -17,10 +17,14 @@ public final class MetabolicMath {
     }
 
     public static double alcoholReduction(double alcohol, double sugar) {
+        if (com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.available())
+            return com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.alcoholReduction(alcohol, sugar);
         return Math.min(0.30, 0.30 * clamp01(alcohol) * amplification(sugar));
     }
 
     public static double alcoholImpairment(double alcohol, double sugar) {
+        if (com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.available())
+            return com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.alcoholImpairment(alcohol, sugar);
         return Math.min(1.0, Math.max(0.0, (clamp01(alcohol) - 0.30) / 0.70) * amplification(sugar));
     }
 
@@ -30,6 +34,8 @@ public final class MetabolicMath {
     }
 
     public static double tickAlcohol(double alcohol, double sugar) {
+        if (com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.available())
+            return com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.tickAlcohol(alcohol, sugar);
         return clamp01(alcohol - sugarDrain(sugar) / ticks(configured(SalienceConfig.ALCOHOL_CLEAR_MINUTES, 20.0)));
     }
 

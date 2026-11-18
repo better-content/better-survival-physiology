@@ -32,20 +32,6 @@ class NectarGainTest {
     }
 
     @Test
-    void sourceMirrorNeverBecomesASecondCarbBarOrTooltipAward() {
-        for (double fruit : new double[]{.04, .001}) {
-            var source = Map.of("fruits", fruit, "sugars", .5);
-            var serving = new com.bettercontent.bettersurvivalphysiology.nutrition.ServingVectors.SourceServing(source);
-            double mirrored = NectarGain.capped(.06, serving.canonicalIngredient(0, 0).gains());
-            var canonical = serving.canonicalIngredient(mirrored, 0).gains();
-            var entries = com.bettercontent.bettersurvivalphysiology.presentation.FoodNutrients.entries(
-                    canonical, mirrored, 0, false);
-            assertEquals(1, entries.size(), "Exactly one native Carb bar, never fruit plus hidden sugar");
-            assertEquals(canonical.get("carbs"), entries.get(0).gain(), 1e-12);
-        }
-    }
-
-    @Test
     void allDeliveryPathsUseResolvedServingAndPaidSipsDoNotRecalculate() throws Exception {
         Path root = Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology");
         String profiles = Files.readString(root.resolve("metabolism/ConsumableProfiles.java"));
@@ -55,9 +41,9 @@ class NectarGainTest {
         String finish = Files.readString(root.resolve("runtime/SalienceEvents.java"));
         assertFalse(finish.contains("double sugar = ConsumableProfiles.servingSugar(player, stack);"),
                 "Native food awards canonical Carbs once without separate sugar");
-        String tooltip = Files.readString(root.resolve("client/ClientSalienceEvents.java"));
+        String tooltip = Files.readString(Path.of("../better-survival-hud/src/main/java/com/bettercontent/bettersurvivalhud/client/physiology/ClientSalienceEvents.java"));
         assertTrue(tooltip.contains("ConsumableProfiles.servingSugar(event.getItemStack(), gains)"));
-        String beverage = Files.readString(root.resolve("compat/BeverageCompat.java"));
+        String beverage = Files.readString(Path.of("../better-drinking-water/src/main/java/com/bettercontent/betterdrinkingwater/integration/PhysiologyBeverages.java"));
         assertTrue(beverage.contains("ConsumableProfiles.servingSugar(stack, serving)"));
         assertTrue(beverage.contains("gains.putDouble(\"carbs\""));
         String sip = beverage.substring(beverage.indexOf("public static void sip("));

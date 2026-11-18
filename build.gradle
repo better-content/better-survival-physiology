@@ -25,16 +25,50 @@ java {
 }
 
 // Native bridge tests are nonshipping and run with the actual beverage provider and Diet.
+// An explicit integration profile mounts freshly compiled owner classes/resources as
+// ForgeGradle dev mods. No old provider JAR may enter this source-only native runtime.
+def sourcePaidProviders = providers.gradleProperty('sourcePaidProviders').orElse('false').get().toBoolean()
 sourceSets {
     nativeFixture {
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+    if (sourcePaidProviders) {
+        paidWaterSource {
+            java.srcDirs = []; resources.srcDirs = []
+            output.classesDirs.setFrom files('../better-drinking-water/build/classes/java/main',
+                    '../better-drinking-water/build/tmp/compileJava')
+            output.resourcesDir = file('../better-drinking-water/build/resources/main')
+        }
+        paidSpiceSource {
+            java.srcDirs = []; resources.srcDirs = []
+            output.classesDirs.setFrom files('../better-spicy-farmers/build/classes/java/main',
+                    '../better-spicy-farmers/build/tmp/compileJava')
+            output.resourcesDir = file('../better-spicy-farmers/build/resources/main')
+        }
+    }
+}
+if (sourcePaidProviders) {
+    ['PaidWaterSource', 'PaidSpiceSource'].each { name ->
+        tasks.named("compile${name}Java").configure { enabled = false }
+        tasks.named("process${name}Resources").configure { enabled = false }
+    }
+    ['better-drinking-water', 'better-spicy-farmers'].each { repo ->
+        if (!file("../${repo}/build/resources/main/META-INF/mods.toml").isFile()
+                || !file("../${repo}/build/classes/java/main").isDirectory())
+            throw new GradleException("Missing compiled source mod outputs for ${repo}")
     }
 }
 
 def nativeRunDirectory = layout.buildDirectory.dir("gametest/${UUID.randomUUID()}").get().asFile
 
 tasks.named('processNativeFixtureResources', ProcessResources) {
+    if (sourcePaidProviders) {
+        dependsOn tasks.named('compileJava')
+        // The dev-mod source has no reobf JAR manifest: mount the freshly generated
+        // core refmap with its nonshipping fixture, rather than loading a stale JAR.
+        from(layout.buildDirectory.file('tmp/compileJava/better_survival_physiology.refmap.json')) { into '' }
+    }
     // Same authored Create-6 Respite repairs as the provider's native fixture, never production resources.
     ['recipes/filling/water_cup.json', 'recipes/pouring/water_cup.json',
      'recipes/emptying/water_cup.json', 'loot_tables/blocks/kettle.json',
@@ -71,6 +105,18 @@ minecraft {
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
             args '--nogui'
             mods { "${mod_id}" { source sourceSets.main; source sourceSets.nativeFixture } }
+            if (sourcePaidProviders) {
+                // Isolated native evidence: export the transformed Diet API handler order.
+                property 'mixin.debug.export', 'true'
+                property 'mixin.debug.export.filter', 'com.illusivesoulworks.diet.common.DietApiImpl'
+                mods {
+                    better_drinking_water { source sourceSets.paidWaterSource }
+                    better_spicy_farmers { source sourceSets.paidSpiceSource }
+                }
+                args '--mixin.config', 'better_drinking_water.mixins.json'
+                ['better_spicy_farmers.runtime.mixins.json', 'better_spicy_farmers.diet.mixins.json',
+                 'better_spicy_farmers.seasoning.mixins.json'].each { config -> args '--mixin.config', config }
+            }
         }
     }
 }
@@ -152,21 +198,24 @@ dependencies {
     nativeColdSweat('curse.maven:cold-sweat-506194:7893262') { transitive = false }
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    compileOnly 'io.github.llamalad7:mixinextras-common:0.5.0' // Forge supplies the runtime injector; no bundled copy.
 
-    compileOnly fg.deobf(beverageDependency)
-    runtimeOnly fg.deobf(beverageDependency)
-    compileOnly files(typedWaterClasses)
-    compileOnly fg.deobf(spicyDependency)
-    compileOnly files(typedSpiceClasses)
+    // Production core compiles without either provider implementation; fixture/test
+    // source sets bind their own typed inputs below. A normal local run may load Water.
+    if (!sourcePaidProviders) runtimeOnly fg.deobf(beverageDependency)
     // Gradle does not inherit main compileOnly into test/nativeFixture compile classpaths.
-    // Explicitly bind identical providers; only the nonshipping fixture runtime gets Spice.
+    // Explicitly bind test providers; only the nonshipping fixture runtime gets Spice.
     testCompileOnly fg.deobf(spicyDependency)
     testRuntimeOnly fg.deobf(spicyDependency)
+    // Pure paid-beverage tests travel with Water; the remaining cross-domain
+    // Spice numeric witness binds its source-built Water helper at test scope only.
+    testCompileOnly files(typedWaterClasses)
+    testRuntimeOnly files(typedWaterClasses)
     nativeFixtureCompileOnly fg.deobf(spicyDependency)
     nativeFixtureCompileOnly fg.deobf(beverageDependency)
     nativeFixtureCompileOnly files(typedWaterClasses)
     nativeFixtureCompileOnly files(typedSpiceClasses)
-    nativeFixtureRuntimeOnly fg.deobf(spicyDependency)
+    if (!sourcePaidProviders) nativeFixtureRuntimeOnly fg.deobf(spicyDependency)
 
     // Exact core native-provider fixture dependencies; no unrelated optional integrations.
     nativeFixtureCompileOnly fg.deobf('curse.maven:curios-api-309927:6418456')
@@ -180,6 +229,10 @@ dependencies {
     nativeFixtureRuntimeOnly fg.deobf('curse.maven:thirst-was-taken-679270:6660408')
     nativeFixtureRuntimeOnly fg.deobf('curse.maven:curios-api-309927:6418456')
     nativeFixtureRuntimeOnly fg.deobf('curse.maven:architectury-api-419699:5137938')
+    // Spice requires Dynamic Trees at runtime; match the provider's pinned dependency.
+    nativeFixtureRuntimeOnly fg.deobf('curse.maven:dynamic-trees-252818:7502488')
+    // The real pack supplies Patchouli; without it Dynamic Trees selects its malformed optional guide fallback.
+    nativeFixtureRuntimeOnly fg.deobf('curse.maven:patchouli-306770:7731017')
     nativeFixtureRuntimeOnly fg.deobf('curse.maven:farmers-delight-398521:8007609')
     nativeFixtureRuntimeOnly fg.deobf('curse.maven:farmers-respite-551453:5543547')
     nativeFixtureRuntimeOnly fg.deobf('curse.maven:brewin-and-chewin-637808:6237884')
@@ -258,10 +311,18 @@ tasks.register('verifyNativeBeverages') {
     dependsOn tasks.named('runGameTestServer')
     doLast {
         exec {
-            commandLine 'python3', '-B', 'scripts/audit_native_diagnostics.py', '10',
+            commandLine 'python3', '-B', 'scripts/audit_native_diagnostics.py', '22',
                     new File(nativeRunDirectory, 'logs/latest.log').absolutePath,
                     new File(nativeRunDirectory, 'logs/debug.log').absolutePath
         }
+    }
+}
+
+if (sourcePaidProviders) {
+    tasks.named('compileNativeFixtureJava', JavaCompile).configure {
+        // The old compile-only provider JAR is not a v4 source API; actual source
+        // classes must win when compiling assertions against captured compositions.
+        classpath = files(typedSpiceClasses, typedWaterClasses) + classpath
     }
 }
 

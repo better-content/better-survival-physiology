@@ -241,15 +241,15 @@ public final class PhysiologyBeverageGameTests {
         source(player, item("better_drinking_water:apple_juice"));
         sip(player, 1);
         var paid = reserve(player);
-        helper.assertTrue(paid.getInt("thirst") == 6, "Normalized plant serving buys six hydration");
+        helper.assertTrue(paid.getInt("thirst") == 3, "Native 250 mB juice serving buys three hydration");
         var nutrition = paid.getCompound("beverage").getCompound("nutrition");
         near(helper, nutrition.getCompound("diet").getDouble("carbs"), .025, "One authored plant Carb entitlement");
         near(helper, nutrition.getDouble("sugar"), 0, "No separate sugar mirror in paid juice");
-        near(helper, DietBridge.snapshot(player).carbs(), .025 / 6, "One sip is not a whole Carb award");
+        near(helper, DietBridge.snapshot(player).carbs(), .025 / 3, "One sip is not a whole Carb award");
         // Altering current capacity cannot reprice prepaid remaining entitlement.
         DietBridge.tracker(player).orElseThrow().setValue("carbs", .5f);
-        for (int index = 1; index < 6; index++) sip(player, 1);
-        near(helper, DietBridge.snapshot(player).carbs(), .5 + .025 * 5 / 6, "Only remaining paid Carb dose released");
+        for (int index = 1; index < 3; index++) sip(player, 1);
+        near(helper, DietBridge.snapshot(player).carbs(), .5 + .025 * 2 / 3, "Only remaining paid Carb dose released");
         helper.assertTrue(reserve(player).isEmpty(), "Completed plant serving cannot replay nutrition");
         helper.succeed();
     }
@@ -266,8 +266,8 @@ public final class PhysiologyBeverageGameTests {
         var returned = stack.getItem().finishUsingItem(stack, player.level(), player);
         MinecraftForge.EVENT_BUS.post(new net.minecraftforge.event.entity.living.LivingEntityUseItemEvent.Finish(player, original, 32, returned));
         near(helper, DietBridge.snapshot(player).carbs(), .025, "Manual finish plus native finish awards Carbs once");
-        helper.assertTrue(player.getFoodData().getFoodLevel() == 11 && thirst.getThirst() == 16,
-                "Manual explicit hunger/hydration once");
+        helper.assertTrue(player.getFoodData().getFoodLevel() == 11 && thirst.getThirst() == 13,
+                "Manual explicit hunger/three hydration once");
         helper.assertTrue(returned.is(Items.GLASS_BOTTLE) && stack.isEmpty(), "One manual plant bottle yields one vessel");
         MetabolicStateStore.get(player).blackout = true;
         thirst.setThirst(10);

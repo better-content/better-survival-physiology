@@ -13,6 +13,11 @@ public final class BeverageAvailability {
             return BeverageAbi.supportsTyped(path -> loader.getResource(path) != null);
         }
     }
-    public static boolean typed() { return ModList.get().isLoaded("better_drinking_water") && Typed.PRESENT; }
-    public static boolean manages(ItemStack stack) { return typed() && BeverageCompat.manages(stack); }
+    public static boolean typed() {
+        return ModList.get().isLoaded("better_drinking_water") && Typed.PRESENT
+                && com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.available();
+    }
+    public static boolean manages(ItemStack stack) {
+        return typed() && com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.manages(stack);
+    }
 }

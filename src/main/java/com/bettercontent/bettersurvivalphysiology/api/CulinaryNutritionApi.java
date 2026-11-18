@@ -1,8 +1,7 @@
 package com.bettercontent.bettersurvivalphysiology.api;
 
-import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicStateStore;
+import com.bettercontent.bettersurvivalphysiology.nutrition.CommittedDietIntake;
 import com.bettercontent.bettersurvivalphysiology.nutrition.DietBridge;
-import com.bettercontent.bettersurvivalphysiology.nutrition.NativeDietRoster;
 import com.bettercontent.bettersurvivalphysiology.nutrition.ServingVectors;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -40,10 +39,25 @@ public final class CulinaryNutritionApi {
     /** Explicit adapters call ONCE after a real committed portion, never preview/start/cancel.
      * There is NO automatic Finish award for managed foods. The registering consumer owns
      * completion dispatch and deduplication for ordinary Finish and explicit custom/placed servings. */
+    /** Legacy ABI: caller already proved a real completed serving and still owns the
+     * separate Spice health charge. Preserve its original captured-stack dose rather
+     * than silently dropping Spice for already compiled Cooking consumers. New callers
+     * must pass their verified paid dose explicitly via the overload below. */
+    @Deprecated
     public static boolean complete(ServerPlayer player, ItemStack stack) {
         var serving = resolve(player, stack);
         if (serving.isEmpty()) return false;
-        apply(player, stack, serving.get());
+        double units = com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge.resolveUnits(player, stack);
+        CommittedDietIntake.commit(player, stack,
+                new CommittedDietIntake.Portion(serving.get().adjusted(), units), true);
+        return true;
+    }
+    /** Verified paid Spice units, captured by the provider AFTER actual completion. */
+    public static boolean complete(ServerPlayer player, ItemStack stack, double paidSpiceUnits) {
+        var serving = resolve(player, stack);
+        if (serving.isEmpty()) return false;
+        CommittedDietIntake.commit(player, stack,
+                new CommittedDietIntake.Portion(serving.get().adjusted(), paidSpiceUnits), true);
         return true;
     }
     /** KC placed bites have no native ItemStack Finish; the Spice owner invokes this ONLY
@@ -72,45 +86,7 @@ public final class CulinaryNutritionApi {
                 com.bettercontent.bettersurvivalphysiology.metabolism.ConsumableProfiles.baseSugar(capturedPortion),
                 actualFraction, nativeGains.gains());
         var canonical = nativeGains.resolveNativeMirrors(sugar, alcohol);
-        apply(player, capturedPortion, new Serving(canonical, canonical, sugar, alcohol), paidSpiceUnits);
-    }
-
-    private static void apply(ServerPlayer player, ItemStack stack, Serving serving) {
-        apply(player, stack, serving, com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge.resolveUnits(player, stack));
-    }
-
-    private static void apply(ServerPlayer player, ItemStack stack, Serving serving, double units) {
-        var before = DietBridge.snapshot(player);
-        var state = MetabolicStateStore.get(player);
-        double sugarBefore = before.carbs(), alcoholBefore = before.alcohol();
-        var diet = DietBridge.tracker(player).orElseThrow(() ->
-                new IllegalStateException("Cannot commit paid culinary nutrition: Diet tracker unavailable"));
-        var available = diet.getValues().keySet();
-        if (!available.containsAll(serving.adjusted().gains().keySet()))
-            throw new IllegalStateException("Diet suite has no culinary nutrients " + serving.adjusted().gains().keySet());
-        // Validate the separately resolved paid Spice dose before committing any of the serving.
-        if (!Double.isFinite(units) || units < 0 || units > 10000)
-            throw new IllegalArgumentException("Invalid actual paid Spice dose");
-        if (units > 0 && !available.contains("spice"))
-            throw new IllegalStateException("Cannot commit paid culinary Spice: Diet suite has no spice group");
-        serving.adjusted().gains().forEach((group, gain) -> {
-            double paid = group.equals("spice") ? Math.max(gain,
-                    com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge.dietGain(units)) : gain;
-            diet.setValue(group, (float) Math.min(1, diet.getValue(group) + paid));
-        });
-        if (units > 0 && !serving.adjusted().gains().containsKey("spice"))
-            diet.setValue("spice", (float) Math.min(1, diet.getValue("spice")
-                    + com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge.dietGain(units)));
-        diet.sync();
-        // Cooking's paid per-ingredient source conversion already merged sugar/alcohol
-        // mirrors into this one canonical serving. No second hidden metabolic award.
-        if (DietBridge.snapshot(player).alcohol() >= 1.0f) {
-            state.blackout = true;
-            state.blackoutX = player.getX(); state.blackoutY = player.getY(); state.blackoutZ = player.getZ();
-        }
-        com.bettercontent.bettersurvivalphysiology.runtime.SalienceEvents.culinaryEffectsCompleted(player);
-        com.bettercontent.bettersurvivalphysiology.runtime.SalienceEvents.beverageFeedback(
-                player, before, sugarBefore, alcoholBefore, stack.isEdible(), true);
-        MetabolicStateStore.save(player);
+        CommittedDietIntake.commit(player, capturedPortion,
+                new CommittedDietIntake.Portion(canonical, paidSpiceUnits), true);
     }
 }

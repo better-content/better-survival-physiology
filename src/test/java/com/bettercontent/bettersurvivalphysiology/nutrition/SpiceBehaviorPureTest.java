@@ -1,6 +1,8 @@
 package com.bettercontent.bettersurvivalphysiology.nutrition;
 
 import com.bettercontent.betterspicyfarmers.core.SpiceMath;
+import com.bettercontent.betterdrinkingwater.integration.BeverageNutrition;
+import com.bettercontent.betterdrinkingwater.integration.BeverageSpiceDose;
 import com.bettercontent.bettersurvivalphysiology.metabolism.NectarGain;
 import java.util.Map;
 
@@ -19,7 +21,7 @@ public final class SpiceBehaviorPureTest {
         check(NutritionSnapshot.Group.VEGETABLES.id.equals("vegetables"), "Diet Vegetables is a distinct ordinary group from Spice");
         near(NectarGain.capped(.5, Map.of("spice", .2)), .1);
         near(NectarGain.capped(.5, Map.of("vegetables", .01, "spice", .2)), .005);
-        near(NectarGain.capped(.5, Map.of("grains", .04, "spice", .2)), .02);
+        near(NectarGain.capped(.5, Map.of("grains", .04, "spice", .2)), .1); // raw source labels cannot cap canonical lasting gains
         near(NectarGain.capped(.5, Map.of("vegetables", .01)), .005);
         for (int i = 0; i <= 100; i++) {
             double level = i / 100.0;

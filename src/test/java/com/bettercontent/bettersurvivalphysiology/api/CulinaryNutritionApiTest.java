@@ -43,8 +43,20 @@ class CulinaryNutritionApiTest {
         assertFalse(hooks.contains("CulinaryNutritionApi.complete("));
         String api = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/api/CulinaryNutritionApi.java"));
         assertFalse(api.contains("@SubscribeEvent"));
-        assertTrue(api.contains("serving.adjusted().gains().forEach"));
-        assertFalse(api.contains("DietApi.getInstance")); // no fallback/tag credit after provenance
+        String commit = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/nutrition/CommittedDietIntake.java"));
+        assertTrue(api.contains("CommittedDietIntake.commit(player, stack"));
+        assertTrue(api.contains("CommittedDietIntake.commit(player, capturedPortion"));
+        assertTrue(commit.contains("gains.forEach((group, gain) -> diet.setValue"));
+        assertEquals(1, api.split("DietApi.getInstance", -1).length - 1); // only the explicit native placed-bite route
+        assertFalse(commit.contains("DietApi.getInstance")); // no fallback/tag credit after provenance
+        assertFalse(commit.contains("SpiceBridge.resolveUnits")); // no preview masquerades as paid dose
+        assertTrue(api.contains("complete(ServerPlayer player, ItemStack stack, double paidSpiceUnits)"));
+    }
+    @Test void paidPortionRejectsInvalidDoseBeforeTrackerMutation() {
+        var serving = new ServingVectors.CanonicalServing(Map.of("carbs", .12));
+        assertThrows(IllegalArgumentException.class, () -> new com.bettercontent.bettersurvivalphysiology.nutrition.CommittedDietIntake.Portion(serving, Double.NaN));
+        assertThrows(IllegalArgumentException.class, () -> new com.bettercontent.bettersurvivalphysiology.nutrition.CommittedDietIntake.Portion(serving, -1));
+        assertThrows(IllegalArgumentException.class, () -> new com.bettercontent.bettersurvivalphysiology.nutrition.CommittedDietIntake.Portion(serving, 10001));
     }
     public static void main(String[] args) throws Exception {
         var tests = new CulinaryNutritionApiTest();
@@ -52,6 +64,7 @@ class CulinaryNutritionApiTest {
         tests.overlappingOwnersFailInsteadOfDoubleIntake();
         tests.resolvedProvenanceAndQualityAreNotRescaledOrMergedWithTags();
         tests.managedFinishDoesNotAutoCompleteAndCancellationNeverCallsComplete();
-        System.out.println("CulinaryNutritionApiTest: 5 PASS (pure/provider and source-boundary; not native completion acceptance)");
+        tests.paidPortionRejectsInvalidDoseBeforeTrackerMutation();
+        System.out.println("CulinaryNutritionApiTest: 6 PASS (pure/provider and source-boundary; not native completion acceptance)");
     }
 }

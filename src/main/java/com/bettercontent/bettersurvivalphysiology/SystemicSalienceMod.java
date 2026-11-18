@@ -20,12 +20,9 @@ public final class SystemicSalienceMod {
         SalienceNetwork.init();
         if (net.minecraftforge.fml.ModList.get().isLoaded("cold_sweat"))
             com.bettercontent.bettersurvivalphysiology.climate.AmbientRateSeam.register();
-        if (com.bettercontent.bettersurvivalphysiology.compat.BeverageAvailability.typed())
-            com.bettercontent.bettersurvivalphysiology.compat.BeverageCompat.register();
-        // Optional Spice API: never load its event class (even for Forge subscriber
-        // reflection) when Spice is absent. Cooking-present source cutover is guarded
-        // inside the event adapter until the atomic active-mod retirement.
-        com.bettercontent.bettersurvivalphysiology.runtime.OptionalNativeFoodBridge.installIfPresent(
-                net.minecraftforge.fml.ModList.get().isLoaded("better_spicy_farmers"));
+        // Water registers its own profile/paid-sip adapter when present; the core
+        // never discovers or classloads a provider implementation.
+        // Spice initiates its optional event adapter after registration; this core
+        // never loads Spice's event class or supplies a second placed-bite subscriber.
     }
 }

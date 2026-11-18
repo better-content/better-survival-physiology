@@ -356,8 +356,16 @@ public final class SpicePhysiologyGameTests {
             var juice = new ItemStack(net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(
                     new net.minecraft.resources.ResourceLocation("better_drinking_water", "apple_juice")));
             f.helper.assertTrue(!juice.isEmpty(), "Qualified typed provider supplies the actual juice item");
+            // Sauce v4 records the actual produced root composition. The historic
+            // hot-chilli 16-equiv/litre recipe at 250 mB still resolves exactly 4 units.
+            var captured = new com.bettercontent.betterspicyfarmers.sauce.SauceComposition(java.util.Map.of(
+                    "chilli", new com.bettercontent.betterspicyfarmers.sauce.SauceComposition.Root(
+                            new com.bettercontent.betterspicyfarmers.sauce.SauceComposition.Fraction(16, 1000),
+                            new com.bettercontent.betterspicyfarmers.sauce.SauceComposition.Fraction(1, 1))));
+            var identity = captured.identity();
             com.bettercontent.betterspicyfarmers.seasoning.SeasoningNbt.write(juice,
-                    new com.bettercontent.betterspicyfarmers.seasoning.SeasoningDose(java.util.Map.of("hot_chilli_sauce", 250)));
+                    new com.bettercontent.betterspicyfarmers.seasoning.SeasoningDose(
+                            java.util.Map.of(identity, 250), java.util.Map.of(identity, captured)));
             near(f.helper, com.bettercontent.betterspicyfarmers.api.SpiceApi.resolveUnits(f.player, juice), 4,
                     "Actual seasoned whole beverage resolves four canonical Spice units");
             var thirst = f.player.getCapability(dev.ghen.thirst.foundation.common.capability.ModCapabilities.PLAYER_THIRST)

@@ -5,7 +5,6 @@ import com.bettercontent.bettersurvivalphysiology.compat.SpiceBridge;
 import com.bettercontent.bettersurvivalphysiology.compat.BrewingCompat;
 import com.bettercontent.bettersurvivalphysiology.compat.ColdSweatCompat;
 import com.bettercontent.bettersurvivalphysiology.compat.EpicFightCompat;
-import com.bettercontent.bettersurvivalphysiology.compat.ThirstCompat;
 import com.bettercontent.bettersurvivalphysiology.config.SalienceConfig;
 import com.bettercontent.bettersurvivalphysiology.metabolism.ConsumableProfiles;
 import com.bettercontent.bettersurvivalphysiology.metabolism.MetabolicMath;
@@ -86,7 +85,9 @@ public final class SalienceEvents {
         state.tickTransient();
         DietBridge.tickTimed(player);
         NutritionSnapshot nutrition = DietBridge.snapshot(player);
-        if (state.blackout && nutrition.alcohol() <= .85f) state.blackout = false;
+        if (com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.available())
+            com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.clearBlackout(state, nutrition.alcohol());
+        else if (state.blackout && nutrition.alcohol() <= .85f) state.blackout = false;
         PendingFruitEffects fruitEffects = PENDING_FRUIT_EFFECTS.get(player.getUUID());
         if (fruitEffects != null && player.level().getGameTime() >= fruitEffects.dueTick()) {
             tuneFruitEffects(player, fruitEffects.before());
@@ -112,7 +113,7 @@ public final class SalienceEvents {
         state.wasOnGround = player.onGround();
         applyIdentityModifiers(player, state, nutrition);
         applyRenewal(player, state, nutrition);
-        applyEnduranceReserve(player, state, nutrition);
+        com.bettercontent.bettersurvivalphysiology.api.SpiceEffects.activateEndurance(player, state, nutrition);
 
         PendingMeal pending = PENDING_MEALS.get(player.getUUID());
         if (pending != null && player.level().getGameTime() >= pending.dueTick()) {
@@ -131,7 +132,9 @@ public final class SalienceEvents {
             if (DietBridge.tracker(player).isPresent()) {
                 NutritionThreadBoundary.onAuthoritativeTick(player, authoritativeNutrition, ordinary());
             }
-            BrewingCompat.suppressNumbedHearts(player);
+            if (com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.available())
+                com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.suppressBrewing(player);
+            else BrewingCompat.suppressNumbedHearts(player);
             MetabolicStateStore.save(player);
             SalienceNetwork.sync(player, authoritativeNutrition, state);
         } else if (presentationChanged) {
@@ -204,12 +207,17 @@ public final class SalienceEvents {
         }
         // Native unmanaged food awards its canonical Carbs once. Paid Alcohol potency is
         // excluded from native food results and committed only on this finished use.
-        double alcohol = ConsumableProfiles.alcohol(stack);
-        DietBridge.awardAlcohol(player, alcohol);
-        if (DietBridge.snapshot(player).alcohol() >= 1.0f) {
-            state.blackout = true;
-            state.blackoutX = player.getX(); state.blackoutY = player.getY(); state.blackoutZ = player.getZ();
-            activation(player, AspectIdentity.CONTROL, "Blackout");
+        if (com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.available()) {
+            com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.applyNativeAlcohol(player, stack, state);
+        } else {
+            // Preserve standalone core's previous native alcohol handling when Water is absent.
+            double alcohol = ConsumableProfiles.alcohol(stack);
+            DietBridge.awardAlcohol(player, alcohol);
+            if (DietBridge.snapshot(player).alcohol() >= 1.0f) {
+                state.blackout = true;
+                state.blackoutX = player.getX(); state.blackoutY = player.getY(); state.blackoutZ = player.getZ();
+                activation(player, AspectIdentity.CONTROL, "Blackout");
+            }
         }
         if (stack.is(net.minecraft.world.item.Items.MILK_BUCKET)) {
             DietBridge.awardMilk(player);
@@ -384,16 +392,6 @@ public final class SalienceEvents {
         }
     }
 
-    private static void applyEnduranceReserve(ServerPlayer player, MetabolicState state, NutritionSnapshot nutrition) {
-        if (nutrition.spice() < SalienceConfig.FOURTH || state.enduranceReserveCooldown > 0) return;
-        if (player.getFoodData().getFoodLevel() <= 2 || ThirstCompat.isLow(player) || EpicFightCompat.isStaminaBelow(player, 0.10)) {
-            state.enduranceReserveTicks = (int) (10 * 20 * MetabolicMath.amplification(nutrition.carbs()));
-            state.enduranceReserveCooldown = 2 * 60 * 20;
-            activation(player, AspectIdentity.ENDURANCE, "Deep Reserve");
-            metabolicDiscovery(player, com.bettercontent.bettersurvivalphysiology.api.event.MetabolicDiscoveryEvent.Kind.DEEP_RESERVE, "A nutritional reserve activated during resource depletion");
-        }
-    }
-
     /** Fractional gains get threshold feedback immediately; only a completed edible serving is a meal. */
     public static void beverageFeedback(ServerPlayer player, NutritionSnapshot before,
                                         double sugarBefore, double alcoholBefore,
@@ -483,6 +481,18 @@ public final class SalienceEvents {
         player.displayClientMessage(Component.literal("Diet waning — " + String.join(", ", faded))
                 .withStyle(style -> style.withColor(0xEEE8D8)), true);
         playAspectSound(player, audible, .20f);
+    }
+
+    /** Spice owns the reserve transition; core retains the unchanged sound/discovery channel. */
+    public static void deepReserveActivated(ServerPlayer player) {
+        activation(player, AspectIdentity.ENDURANCE, "Deep Reserve");
+        metabolicDiscovery(player, com.bettercontent.bettersurvivalphysiology.api.event.MetabolicDiscoveryEvent.Kind.DEEP_RESERVE,
+                "A nutritional reserve activated during resource depletion");
+    }
+
+    /** Feedback identity stays on the unchanged core sound bus; Water owns the transition. */
+    public static void alcoholBlackoutActivated(ServerPlayer player) {
+        activation(player, AspectIdentity.CONTROL, "Blackout");
     }
 
     private static void metabolicDiscovery(ServerPlayer player, com.bettercontent.bettersurvivalphysiology.api.event.MetabolicDiscoveryEvent.Kind kind, String detail) {

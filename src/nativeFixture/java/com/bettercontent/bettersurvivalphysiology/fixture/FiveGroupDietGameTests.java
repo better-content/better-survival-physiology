@@ -1,7 +1,6 @@
 package com.bettercontent.bettersurvivalphysiology.fixture;
 
 import com.bettercontent.bettersurvivalphysiology.SystemicSalienceMod;
-import com.bettercontent.bettersurvivalphysiology.config.SalienceConfig;
 import com.bettercontent.betterdrinkingwater.api.BeverageEvents;
 import net.minecraftforge.common.MinecraftForge;
 import com.bettercontent.bettersurvivalphysiology.nutrition.DietAwardGuard;
@@ -87,6 +86,11 @@ public final class FiveGroupDietGameTests {
                 .filter(g -> g.getName().equals("carbs")).count() == 1,
                 "Overlapping source tags cannot generate two native Carbs awards");
         var cheese = item("brewinandchewin:flaxen_cheese_wedge");
+        var observed = ServingVectors.CanonicalServing.fromNative(api.get(player, cheese)).gains();
+        var explicit = ServingVectors.CanonicalServing.fromNative(DietDairySplit.repartition(
+                player, List.of(cheese), api.get(player, cheese))).gains();
+        System.out.println("BSP_DAIRY_DIAG observed=" + observed + " explicit=" + explicit
+                + " derivedCount=" + DietDairySplit.serverDerivedDairy().size());
         for (var result : List.of(api.get(player, cheese), api.get(player, cheese, 6, .6f),
                 api.get(player, List.of(cheese), 6, .6f))) {
             var canonical = ServingVectors.CanonicalServing.fromNative(result).gains();
@@ -95,6 +99,29 @@ public final class FiveGroupDietGameTests {
             near(helper, protein / (protein + carbs), .8, "Dairy native 80/20 across all three API overloads");
             helper.assertTrue(canonical.keySet().stream().noneMatch(NativeDietRoster.RETIRED::contains),
                     "Native result must already be canonical");
+        }
+        // Spice's return transform and the dairy split must compose on the SAME native
+        // serving, including Diet's delegated overloads; neither can short-circuit the other.
+        var captured = new com.bettercontent.betterspicyfarmers.sauce.SauceComposition(Map.of(
+                "chilli", new com.bettercontent.betterspicyfarmers.sauce.SauceComposition.Root(
+                        new com.bettercontent.betterspicyfarmers.sauce.SauceComposition.Fraction(20, 1000),
+                        new com.bettercontent.betterspicyfarmers.sauce.SauceComposition.Fraction(1, 1))));
+        var seasonedCheese = cheese.copy();
+        com.bettercontent.betterspicyfarmers.seasoning.SeasoningNbt.write(seasonedCheese,
+                new com.bettercontent.betterspicyfarmers.seasoning.SeasoningDose(
+                        Map.of(captured.identity(), 50), Map.of(captured.identity(), captured)));
+        near(helper, com.bettercontent.betterspicyfarmers.api.SpiceApi.resolveUnits(player, seasonedCheese), 1,
+                "Real captured 50mB seasoning gives one canonical Spice unit");
+        for (var result : List.of(api.get(player, seasonedCheese), api.get(player, seasonedCheese, 6, .6f),
+                api.get(player, List.of(seasonedCheese), 6, .6f))) {
+            var combined = ServingVectors.CanonicalServing.fromNative(result).gains();
+            double protein = combined.getOrDefault("proteins", 0.0), carbs = combined.getOrDefault("carbs", 0.0);
+            helper.assertTrue(protein + carbs > 0, "Seasoned dairy retains native nutrition");
+            near(helper, protein / (protein + carbs), .8, "Seasoned dairy preserves native 80/20 split");
+            near(helper, combined.getOrDefault("spice", 0.0), .2,
+                    "Seasoned dairy returns exactly one canonical Spice award");
+            helper.assertTrue(names(result).stream().filter("spice"::equals).count() == 1,
+                    "Native Spice group appears exactly once in dairy result");
         }
         Map<String, Double> single = ServingVectors.CanonicalServing.fromNative(api.get(player, cheese, 6, .6f)).gains();
         Map<String, Double> composite = ServingVectors.CanonicalServing.fromNative(
@@ -149,27 +176,21 @@ public final class FiveGroupDietGameTests {
                     DietDairySplit.repartition(List.of(dairy), new DietResult(unsplit), true)).gains();
             near(helper, clientDairy.get("proteins"), dairyGains.get("proteins"), "Client synced native-derived Protein");
             near(helper, clientDairy.get("carbs"), dairyGains.get("carbs"), "Client synced native-derived Carbs");
-            // Set the actual loaded server config so the milk, beverage profile and
-            // native-result routes must read the SAME setting; restore even on failure.
-            double originalShare = SalienceConfig.DAIRY_PROTEIN_SHARE.get();
-            try {
-                SalienceConfig.DAIRY_PROTEIN_SHARE.set(.60);
-                var milk60 = ServingVectors.milk().gains();
-                near(helper, milk60.get("proteins"), .036, "Configured paid milk Protein at 60/40");
-                near(helper, milk60.get("carbs"), .024, "Configured paid milk Carbs at 60/40");
-                CompoundTag profile = new CompoundTag();
-                MinecraftForge.EVENT_BUS.post(new BeverageEvents.Profile(player, new ItemStack(Items.MILK_BUCKET), profile));
-                near(helper, profile.getCompound("diet").getDouble("proteins"), milk60.get("proteins"),
-                        "Actual beverage profile listener uses shared configured milk Protein");
-                near(helper, profile.getCompound("diet").getDouble("carbs"), milk60.get("carbs"),
-                        "Actual beverage profile listener uses shared configured milk Carbs");
-                var configuredNative = ServingVectors.CanonicalServing.fromNative(DietDairySplit.repartition(
-                        List.of(dairy), new DietResult(unsplit), true)).gains();
-                near(helper, configuredNative.get("proteins") / (configuredNative.get("proteins") + configuredNative.get("carbs")),
-                        .60, "Client native recipe classification reads same loaded config");
-            } finally {
-                SalienceConfig.DAIRY_PROTEIN_SHARE.set(originalShare);
-            }
+            // GameTests run concurrently on one server: do not mutate the shared loaded
+            // config while other native tests assert the default 80/20 serving.
+            var milk60 = ServingVectors.milk(.60).gains();
+            near(helper, milk60.get("proteins"), .036, "Explicit paid milk Protein at 60/40");
+            near(helper, milk60.get("carbs"), .024, "Explicit paid milk Carbs at 60/40");
+            var configuredNative = ServingVectors.CanonicalServing.fromNative(DietDairySplit.repartition(
+                    List.of(dairy), new DietResult(unsplit), true, .60)).gains();
+            near(helper, configuredNative.get("proteins") / (configuredNative.get("proteins") + configuredNative.get("carbs")),
+                    .60, "Client native recipe classification at explicit 60/40");
+            CompoundTag profile = new CompoundTag();
+            MinecraftForge.EVENT_BUS.post(new BeverageEvents.Profile(player, new ItemStack(Items.MILK_BUCKET), profile));
+            near(helper, profile.getCompound("diet").getDouble("proteins"), ServingVectors.milk().gains().get("proteins"),
+                    "Actual beverage profile listener uses loaded milk Protein");
+            near(helper, profile.getCompound("diet").getDouble("carbs"), ServingVectors.milk().gains().get("carbs"),
+                    "Actual beverage profile listener uses loaded milk Carbs");
             for (ItemStack source : List.of(dairy, item("brewinandchewin:flaxen_cheese_wedge"))) {
                 var existing = DietApi.getInstance().get(player, source).get();
                 var raw = new HashMap<>(existing);

@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Source/privacy invariant only; native behavior is covered by the owning full gate. */
 final class LoggingBoundaryTest {
     @Test void authoritativeFeatureBoundaryAndPrivacyRemainExplicit() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/compat/BeverageCompat.java"));
+        String source = Files.readString(Path.of("../better-drinking-water/src/main/java/com/bettercontent/betterdrinkingwater/integration/PhysiologyBeverages.java"));
         source += Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/diagnostics/FeatureObservation.java"));
         assertTrue(source.contains("beverage.check"), "missing authored boundary beverage.check");
         assertTrue(source.contains("beverage.release"), "missing authored boundary beverage.release");

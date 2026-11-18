@@ -8,7 +8,7 @@ public final class AlcoholProfiles {
     private AlcoholProfiles() {}
 
     public static double potency(String itemId) {
-        return all().getOrDefault(itemId, 0.0);
+        return com.bettercontent.bettersurvivalphysiology.api.BeverageProfiles.alcoholPotency(itemId);
     }
 
     public static Map<String, Double> all() {

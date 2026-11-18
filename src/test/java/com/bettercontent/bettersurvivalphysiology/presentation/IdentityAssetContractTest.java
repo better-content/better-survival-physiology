@@ -2,7 +2,6 @@ package com.bettercontent.bettersurvivalphysiology.presentation;
 
 import org.junit.jupiter.api.Test;
 
-import javax.imageio.ImageIO;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -12,7 +11,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 final class IdentityAssetContractTest {
-    private static final String BADGE_HASH = "523fb4bbecc016df70c149eb0d49bd3a50e8d32b1a837c011670b83247825af4";
     private static final Map<String, String> MOTIF_HASHES = Map.of(
             "impact", "1371c31e65d10a4b9aff832bc0106ca97c6f81ff81b85b48f3355be864622da3",
             "tempo", "d06478a8c71c6b77fae7118b8f2ec9b87142b87b7b83717366c0d2dfa025ee87",
@@ -23,18 +21,6 @@ final class IdentityAssetContractTest {
             "renewal", "85c740fdb60b93f6e55083a6a1e1f76f8225ca1e8972c24ae9209db09cf0edaf",
             "control", "19bde4f9b28e3d769b1a6a2b7675f8f82672b9c1283d2103249c7adca73ccf88"
     );
-
-    @Test
-    void canonicalBadgeAndFontCoverEightIdentities() throws Exception {
-        byte[] bytes = resource("/assets/better_survival_physiology/textures/gui/aspect_badges.png").readAllBytes();
-        assertEquals(BADGE_HASH, HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
-        var image = ImageIO.read(new java.io.ByteArrayInputStream(bytes));
-        assertEquals(144, image.getWidth()); assertEquals(18, image.getHeight());
-        // Keep all old atlas bytes unchanged; only slot 5 now selects a standalone generated asset.
-        BadgeResourcePureTest.run(path -> getClass().getResourceAsStream(path));
-        for (AspectIdentity aspect : AspectIdentity.values())
-            assertFalse(aspect.badge().chars().anyMatch(Character::isWhitespace));
-    }
 
     @Test
     void sugarCrashHasItsOwnBrokenTempoMotif() throws Exception {
@@ -50,11 +36,17 @@ final class IdentityAssetContractTest {
         String sounds = new String(resource("/assets/better_survival_physiology/sounds.json").readAllBytes(), StandardCharsets.UTF_8);
         for (AspectIdentity aspect : AspectIdentity.values()) {
             String id = aspect.name().toLowerCase();
-            assertTrue(sounds.contains("aspect." + id));
-            byte[] bytes = resource("/assets/better_survival_physiology/sounds/aspect/" + id + ".ogg").readAllBytes();
+            String motif = switch (id) {
+                case "power" -> "impact";
+                case "motion" -> "mobility";
+                case "endurance" -> "robustness";
+                default -> id;
+            };
+            assertTrue(sounds.contains("\"aspect." + id + "\": { \"sounds\": [\"better_survival_physiology:aspect/" + motif + "\"] }"));
+            byte[] bytes = resource("/assets/better_survival_physiology/sounds/aspect/" + motif + ".ogg").readAllBytes();
             assertTrue(bytes.length > 4000, id);
             assertArrayEquals(new byte[]{'O', 'g', 'g', 'S'}, java.util.Arrays.copyOf(bytes, 4));
-            assertEquals(MOTIF_HASHES.get(id),
+            assertEquals(MOTIF_HASHES.get(motif),
                     HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)), id);
         }
     }

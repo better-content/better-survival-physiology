@@ -34,7 +34,7 @@ public record PresentationSnapshot(int flags, int workSequence, int[] nutrientSe
             } else if (aspects[index] == AspectIdentity.CONTROL) {
                 estimates[index] = NutritionEstimates.alcoholSeconds(values[index], nutrition.carbs());
             } else {
-                double floor = DietBenefits.activePerkFloor(aspects[index], values[index]);
+                double floor = PresentationThresholds.activePerkFloor(aspects[index], values[index]);
                 estimates[index] = floor > 0 ? NutritionEstimates.nutrientSeconds(values[index], floor, nutrition.carbs()) : -1;
             }
         }

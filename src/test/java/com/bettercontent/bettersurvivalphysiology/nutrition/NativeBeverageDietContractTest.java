@@ -32,18 +32,22 @@ class NativeBeverageDietContractTest {
             assertTrue(consume.contains("DietApi.get:"));
             assertTrue(consume.contains("fireConsumeStackEvent"));
             assertTrue(consume.contains("Method apply:"));
-            String source = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/compat/BeverageCompat.java"));
+            String source = Files.readString(Path.of("../better-drinking-water/src/main/java/com/bettercontent/betterdrinkingwater/integration/PhysiologyBeverages.java"));
             assertTrue(source.contains("ConsumableProfiles.dietGains(event.player(), stack)"));
             String resolver = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/metabolism/ConsumableProfiles.java"));
             assertTrue(resolver.contains("DietApi.getInstance().get(player, stack).get()"));
-            assertTrue(source.contains("if (manages(event.getStack())) event.setCanceled(true)"),
-                    "New native plant bottles veto only their duplicate Diet whole-item award");
-            assertTrue(source.contains("diet.setValue(group.id"));
-            assertTrue(source.contains("diet.sync()"));
+            assertTrue(source.contains("if (ownsCompleted(event.getStack())) event.setCanceled(true)"),
+                    "Only a completed typed whole-drink receipt may veto the duplicate Diet award");
+            assertTrue(source.contains("NativeCupOwnership.typedWholeCompletion("));
+            assertTrue(source.contains("claim.isPresent(), claim.map("));
+            String writer = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/nutrition/CommittedDietIntake.java"));
+            assertTrue(source.contains("CommittedDietIntake.commit("));
+            assertTrue(writer.contains("gains.forEach((group, gain) -> diet.setValue"));
+            assertTrue(writer.contains("diet.sync()"));
             assertFalse(source.contains("diet.consume("));
             assertFalse(source.contains("LivingEntityUseItemEvent"));
             assertFalse(source.contains("finishUsingItem("));
-            assertFalse(source.contains("amplification("));
+            assertFalse(source.contains("MetabolicMath.amplification("));
             assertTrue(source.contains("if (state.blackout) {\n            RuntimeDiagnostics.playerEvent(player, \"beverage.release\", \"rejected\", \"blackout_defense\"); return;"));
             assertTrue(source.contains("stack.is(Items.MILK_BUCKET)"));
             assertFalse(source.contains("MILK_BOTTLE"), "Bottles use normal Diet lookup, not bucket overrides");

@@ -17,6 +17,8 @@ public abstract class DietFoodTooltipMixin {
     @Inject(method = "renderItemTooltip", at = @At("HEAD"), cancellable = true, remap = false)
     private static void better_survival_physiology$replaceFoodTooltip(Player player, ItemStack stack,
                                                                       List<Component> tooltip, CallbackInfo ci) {
-        ci.cancel();
+        // The replacement renderer lives in Better Survival HUD; standalone core
+        // keeps Diet's native tooltip rather than hiding information entirely.
+        if (net.minecraftforge.fml.ModList.get().isLoaded("better_survival_hud")) ci.cancel();
     }
 }

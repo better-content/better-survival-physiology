@@ -19,10 +19,12 @@ class BeverageIntegrationContractTest {
         assertTrue(feedback.contains("NutritionThreadBoundary.onMealSettled"));
         assertTrue(feedback.contains("SalienceNetwork.sync"));
         assertFalse(feedback.contains("player.heal("));
-        String integration = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/compat/BeverageCompat.java"));
+        String integration = Files.readString(Path.of("../better-drinking-water/src/main/java/com/bettercontent/betterdrinkingwater/integration/PhysiologyBeverages.java"));
         assertTrue(integration.contains("event.to() == 1.0"));
         assertTrue(integration.contains("MetabolicStateStore.save(player)"));
-        assertTrue(integration.contains("state.blackoutX = player.getX()"));
+        String writer = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/nutrition/CommittedDietIntake.java"));
+        assertTrue(writer.contains("state.blackoutX = player.getX()"));
+        assertTrue(integration.contains("CommittedDietIntake.commit("));
         assertTrue(integration.contains("if (MetabolicStateStore.get(event.player()).blackout) {\n            event.setCanceled(true);"));
         assertTrue(integration.contains("RuntimeDiagnostics.playerEvent(event.player(), \"beverage.check\", \"vetoed\", \"blackout\")"));
     }
@@ -49,15 +51,19 @@ class BeverageIntegrationContractTest {
     @Test
     void optionalIntegrationIsGuardedAndProviderIsNotBundled() throws Exception {
         String entry = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/SystemicSalienceMod.java"));
-        assertTrue(entry.contains("compat.BeverageAvailability.typed()"));
-        assertTrue(entry.contains("BeverageCompat.register()"));
+        assertFalse(entry.contains("BeverageCompat.register()"));
+        String provider = Files.readString(Path.of("../better-drinking-water/src/main/java/com/bettercontent/betterdrinkingwater/WaterSurvival.java"));
+        assertTrue(provider.contains("ModList.get().isLoaded(\"better_survival_physiology\")"));
+        assertTrue(provider.contains("PhysiologyLoaded.register()"));
         String availability = Files.readString(Path.of("src/main/java/com/bettercontent/bettersurvivalphysiology/compat/BeverageAvailability.java"));
         assertTrue(availability.contains("ModList.get().isLoaded(\"better_drinking_water\") && Typed.PRESENT"));
+        assertTrue(availability.contains("BeverageProfiles.available()"));
         assertTrue(availability.contains("BeverageAbi.supportsTyped(path -> loader.getResource(path) != null)"));
         String metadata = Files.readString(Path.of("src/main/resources/META-INF/mods.toml"));
         assertTrue(metadata.contains("modId=\"better_drinking_water\"\nmandatory=false"));
         String build = Files.readString(Path.of("build.gradle"));
-        assertTrue(build.contains("compileOnly fg.deobf(beverageDependency)"));
+        assertFalse(build.contains("compileOnly fg.deobf(beverageDependency)"));
+        assertTrue(build.contains("nativeFixtureCompileOnly fg.deobf(beverageDependency)"));
         assertTrue(build.contains("runtimeOnly fg.deobf(beverageDependency)"));
         assertTrue(build.contains("flatDir { dirs beverageDirectory"));
         assertTrue(build.contains("MessageDigest.getInstance('SHA-256')"));
