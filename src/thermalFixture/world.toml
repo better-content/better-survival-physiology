@@ -1,0 +1,4 @@
+# Nonshipping thermal stress fixture: these two biome overrides force WORLD beyond
+# Cold Sweat's native damage bounds without changing BODY/CORE/RATE or the pack.
+[Biomes]
+"Biome Temperatures" = [["minecraft:desert", 80, 80, "c"], ["minecraft:snowy_plains", -80, -80, "c"]]

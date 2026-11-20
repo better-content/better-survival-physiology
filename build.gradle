@@ -28,10 +28,20 @@ java {
 // An explicit integration profile mounts freshly compiled owner classes/resources as
 // ForgeGradle dev mods. No old provider JAR may enter this source-only native runtime.
 def sourcePaidProviders = providers.gradleProperty('sourcePaidProviders').orElse('false').get().toBoolean()
+def thermalProbe = providers.gradleProperty('thermalProbe').orElse('false').get().toBoolean()
+if (thermalProbe && !sourcePaidProviders)
+    throw new GradleException('The isolated thermal GameTest requires -PsourcePaidProviders=true to exclude Water runtime')
 sourceSets {
     nativeFixture {
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+    // Short nonshipping climate calibration; never mounted in the ordinary native suite or runtime JAR.
+    thermalFixture {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        // Do not inherit main runtime-only Water: its nested module overlaps the
+        // pinned Cold Sweat runtime in this deliberately minimal fixture.
+        runtimeClasspath += sourceSets.main.output
     }
     if (sourcePaidProviders) {
         paidWaterSource {
@@ -61,6 +71,14 @@ if (sourcePaidProviders) {
 }
 
 def nativeRunDirectory = layout.buildDirectory.dir("gametest/${UUID.randomUUID()}").get().asFile
+def thermalRunDirectory = layout.buildDirectory.dir("thermal-probe/${UUID.randomUUID()}").get().asFile
+
+tasks.named('processThermalFixtureResources', ProcessResources) {
+    dependsOn tasks.named('compileJava')
+    // Mixin bootstrap reads the fixture classpath before Forge assembles dev-mod roots.
+    from 'src/main/resources/better_survival_physiology.mixins.json'
+    from layout.buildDirectory.file('tmp/compileJava/better_survival_physiology.refmap.json')
+}
 
 tasks.named('processNativeFixtureResources', ProcessResources) {
     if (sourcePaidProviders) {
@@ -96,7 +114,8 @@ minecraft {
             mods { "${mod_id}" { source sourceSets.main } }
         }
         gameTestServer {
-            workingDirectory nativeRunDirectory
+            // Reuse ForgeGradle's actual GameTest launcher rather than recreating its module path.
+            workingDirectory thermalProbe ? thermalRunDirectory : nativeRunDirectory
             property 'forge.logging.console.level', 'info'
             property 'forge.enableGameTest', 'true'
             property 'forge.gameTestServer', 'true'
@@ -104,8 +123,11 @@ minecraft {
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
             args '--nogui'
-            mods { "${mod_id}" { source sourceSets.main; source sourceSets.nativeFixture } }
-            if (sourcePaidProviders) {
+            mods { "${mod_id}" {
+                source sourceSets.main
+                source(thermalProbe ? sourceSets.thermalFixture : sourceSets.nativeFixture)
+            } }
+            if (sourcePaidProviders && !thermalProbe) {
                 // Isolated native evidence: export the transformed Diet API handler order.
                 property 'mixin.debug.export', 'true'
                 property 'mixin.debug.export.filter', 'com.illusivesoulworks.diet.common.DietApiImpl'
@@ -196,6 +218,8 @@ dependencies {
     nativeEpicFight('curse.maven:epic-fight-mod-405076:8049910') { transitive = false }
     nativeDiet('curse.maven:diet-443570:4813904') { transitive = false }
     nativeColdSweat('curse.maven:cold-sweat-506194:7893262') { transitive = false }
+    thermalFixtureRuntimeOnly fg.deobf('curse.maven:cold-sweat-506194:7893262')
+    thermalFixtureRuntimeOnly fg.deobf('curse.maven:diet-443570:4813904')
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     compileOnly 'io.github.llamalad7:mixinextras-common:0.5.0' // Forge supplies the runtime injector; no bundled copy.
@@ -297,13 +321,22 @@ tasks.register('verifyFull') {
     dependsOn tasks.named('verifyFast'), tasks.named('stageRuntimeJar'), tasks.named('verifyNativeBeverages')
 }
 
+tasks.register('prepareThermalProbe', Copy) {
+    from('src/nativeFixture/resources/gameteststructures') { into 'gameteststructures' }
+    from 'src/nativeFixture/server.properties'
+    from 'src/thermalFixture/eula.txt'
+    from('../../better-content-modpack/config/coldsweat/main.toml') { into 'config/coldsweat' }
+    from('src/thermalFixture/world.toml') { into 'config/coldsweat' }
+    into thermalRunDirectory
+}
 tasks.register('prepareNativeBeverages', Copy) {
     from('src/nativeFixture/resources/gameteststructures') { into 'gameteststructures' }
     from 'src/nativeFixture/server.properties'
     into nativeRunDirectory
 }
 tasks.matching { it.name.startsWith('prepareRunGameTestServer') }.configureEach {
-    dependsOn tasks.named('prepareNativeBeverages'), tasks.named('nativeFixtureClasses')
+    if (thermalProbe) dependsOn tasks.named('prepareThermalProbe'), tasks.named('thermalFixtureClasses')
+    else dependsOn tasks.named('prepareNativeBeverages'), tasks.named('nativeFixtureClasses')
 }
 tasks.register('verifyNativeBeverages') {
     group = 'verification'

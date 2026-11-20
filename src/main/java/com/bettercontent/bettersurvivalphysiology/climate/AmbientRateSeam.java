@@ -59,7 +59,12 @@ public final class AmbientRateSeam {
         Class<?> type = modifier.getClass();
         return type == BlockTempModifier.class || type == EntitiesTempModifier.class
                 || type == ThermalSourceTempModifier.class || type == WaterTempModifier.class
-                || type == ValkShipBlockTempModifier.class;
+                || type == ValkShipBlockTempModifier.class
+                // Cold Sweat's WORLD inventory-item modifier is a carried heat/cold source,
+                // not ambient biome exposure. A nonzero WORLD item delta must
+                // retain native RATE; this aggregate cannot distinguish two
+                // opposing individual item contributions with a zero net delta.
+                || type == InventoryItemsTempModifier.class;
     }
     private static String signature(List<TempModifier> modifiers) {
         StringBuilder result = new StringBuilder();
@@ -76,11 +81,25 @@ public final class AmbientRateSeam {
         if (!(event.getEntity() instanceof ServerPlayer)) return;
         if (!registered()) { diagnose("Cold Sweat modifier registry not ready"); return; }
         if (event.getTrait() == Temperature.Trait.RATE) {
+            // Cold Sweat can gather defaults again after a dimension change, passing
+            // the existing modifiers to this event. Keep exactly one own modifier
+            // after native insulation; never reorder or remove another owner's RATE.
+            List<TempModifier> rates = event.getModifiers();
+            long own = rates.stream().filter(AmbientRateModifier.class::isInstance).count();
+            if (own == 1 && rates.get(rates.size() - 1) instanceof AmbientRateModifier) return;
+            if (own != 0) rates.removeIf(AmbientRateModifier.class::isInstance);
             event.addModifier(new AmbientRateModifier());
             return;
         }
         if (event.getTrait() != Temperature.Trait.WORLD) return;
         List<TempModifier> original = new ArrayList<>(event.getModifiers());
+        if (original.stream().anyMatch(WorldProbe.class::isInstance)) {
+            // A previous, complete layout is already scoped. Reject partial or
+            // altered layouts rather than silently stripping foreign modifiers.
+            if (verifiedWorldLayout(original) < 0)
+                diagnose("altered existing WORLD probes: " + signature(original));
+            return;
+        }
         int firstLocal = -1;
         boolean biome = false, block = false;
         for (int i = 0; i < original.size(); i++) {
@@ -114,7 +133,9 @@ public final class AmbientRateSeam {
 
     /** Recheck the live list: later mods may insert sources after our final probe. */
     private static int verifiedLocals(ServerPlayer player) {
-        List<TempModifier> list = Temperature.getModifiers(player, Temperature.Trait.WORLD);
+        return verifiedWorldLayout(Temperature.getModifiers(player, Temperature.Trait.WORLD));
+    }
+    private static int verifiedWorldLayout(List<TempModifier> list) {
         if (list.isEmpty() || list.size() > 70) return -1;
         int index = 0;
         boolean biome = false, block = false;
@@ -228,13 +249,14 @@ public final class AmbientRateSeam {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player) || !registered()) return;
         List<TempModifier> rates = Temperature.getModifiers(player, Temperature.Trait.RATE);
         AmbientRateModifier own = null;
+        int ownCount = 0;
         for (TempModifier modifier : rates) if (modifier instanceof AmbientRateModifier rate) {
-            if (own != null) { diagnose("duplicate ambient RATE modifiers"); return; }
             own = rate;
+            ownCount++;
         }
-        if (own != null && rates.get(rates.size() - 1) != own) {
-            // Native insulation can be inserted after defaults on equipment change.
-            // Move only our modifier, preserving all native modifiers' order.
+        if (ownCount > 1 || own != null && rates.get(rates.size() - 1) != own) {
+            // A repeated native gather or new insulation may reorder/duplicate us.
+            // Remove only our modifiers, preserving all native modifiers' order.
             Temperature.removeModifiers(player, Temperature.Trait.RATE, AmbientRateModifier.class);
             Temperature.addModifier(player, new AmbientRateModifier(), Temperature.Trait.RATE, Placement.LAST);
         }
