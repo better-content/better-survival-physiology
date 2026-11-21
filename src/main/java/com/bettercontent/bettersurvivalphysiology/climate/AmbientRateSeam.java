@@ -28,7 +28,6 @@ public final class AmbientRateSeam {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final ResourceLocation PROBE = new ResourceLocation(SystemicSalienceMod.MOD_ID, "ambient_world_probe");
     private static final ResourceLocation RATE = new ResourceLocation(SystemicSalienceMod.MOD_ID, "ambient_rate");
-    private static final double EPS = 1e-9, TARGET_TICKS = 72_000D;
     private static final int MAX_DIAGNOSTICS = 32;
     private static final Set<String> REPORTED = new HashSet<>();
     private static final Map<ServerPlayer, Frame> FRAMES = new WeakHashMap<>();
@@ -169,9 +168,9 @@ public final class AmbientRateSeam {
     private static final class Frame {
         int tick = -1, seen = -1, locals;
         double ambient, previous;
-        boolean safe, sourceActive, complete;
+        boolean safe, complete;
         void reset(int currentTick) {
-            tick = currentTick; seen = -1; locals = 0; safe = false; sourceActive = false; complete = false;
+            tick = currentTick; seen = -1; locals = 0; safe = false; complete = false;
         }
         void accept(int stage, int expected, double value) {
             if (complete || !Double.isFinite(value) || expected < 1 || expected > 32) { safe = false; return; }
@@ -179,8 +178,7 @@ public final class AmbientRateSeam {
                 if (seen != -1) { safe = false; return; }
                 locals = expected; seen = 0; safe = true; ambient = previous = value;
             } else if (safe && expected == locals && stage == seen + 1 && stage <= expected + 1) {
-                if (stage <= expected) sourceActive |= Math.abs(value - previous) > EPS;
-                else complete = true;
+                if (stage == expected + 1) complete = true;
                 seen = stage; previous = value;
             } else safe = false;
         }
@@ -212,7 +210,7 @@ public final class AmbientRateSeam {
                         || !Double.isFinite(nativeRate) || nativeRate == 0) return nativeRate;
                 Frame frame = FRAMES.get(player);
                 if (frame == null || frame.tick != player.tickCount || !frame.safe || !frame.complete
-                        || frame.seen != frame.locals + 1 || frame.sourceActive) return nativeRate;
+                        || frame.seen != frame.locals + 1) return nativeRate;
                 int locals = verifiedLocals(player);
                 if (locals != frame.locals) {
                     diagnose("live WORLD layout changed or unclassified source: "
@@ -226,21 +224,10 @@ public final class AmbientRateSeam {
                 }
                 double f = Temperature.get(player, Temperature.Trait.FREEZING_POINT);
                 double b = Temperature.get(player, Temperature.Trait.BURNING_POINT);
-                double base = Temperature.get(player, Temperature.Trait.BASE);
-                double body = Temperature.get(player, Temperature.Trait.BODY);
                 Double configuredRate = ConfigSettings.TEMP_RATE.get();
-                if (!Double.isFinite(f) || !Double.isFinite(b) || f >= b
-                        || !Double.isFinite(base) || Math.abs(base) > EPS || !Double.isFinite(body)
-                        || configuredRate == null || !Double.isFinite(configuredRate) || configuredRate <= 0)
-                    return nativeRate;
-                double delta = frame.ambient < f ? frame.ambient - f
-                        : frame.ambient > b ? frame.ambient - b : 0;
-                if (delta == 0 || !Double.isFinite(delta) || Math.signum(delta) != Math.signum(nativeRate)
-                        || Math.signum(body) == -Math.signum(delta)) return nativeRate;
-                double naked = Math.max(Math.abs(delta) * configuredRate / 7D, configuredRate / 50D);
-                if (!Double.isFinite(naked) || naked <= 0) return nativeRate;
-                double factor = Math.min(1D, (100D / TARGET_TICKS) / naked);
-                return Double.isFinite(factor) && factor > 0 ? nativeRate * factor : nativeRate;
+                return configuredRate == null ? nativeRate
+                        : AmbientRateMath.adjustHarmfulDrift(nativeRate, frame.ambient, frame.previous, f, b,
+                                             configuredRate, Temperature.get(player, Temperature.Trait.BODY));
             };
         }
     }

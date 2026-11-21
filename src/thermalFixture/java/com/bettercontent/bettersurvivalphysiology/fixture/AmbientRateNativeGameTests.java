@@ -21,6 +21,7 @@ import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -46,12 +47,29 @@ public final class AmbientRateNativeGameTests {
                 try {
                     Reading hotStart = read(h, hot.player, true);
                     Reading coldStart = read(h, cold.player, false);
+                    h.assertTrue(Math.abs(hotStart.body) < 3D && Math.abs(coldStart.body) < 3D,
+                            "body moved too far before the native harmful exposure sample");
                     h.runAfterDelay(130, () -> {
                         try {
-                            check(h, hot.player, hotStart, true);
-                            check(h, cold.player, coldStart, false);
-                            h.succeed();
-                        } finally { players.forEach(PlayerFixture::close); }
+                            Reading hotAmbient = check(h, hot.player, hotStart, true);
+                            Reading coldAmbient = check(h, cold.player, coldStart, false);
+                            // The fixture's two block emissions are deliberately bounded and
+                            // source-owned. A weak local source must not toggle back to native RATE.
+                            hot.player.level().setBlock(hot.player.blockPosition().east(2),
+                                    Blocks.MAGMA_BLOCK.defaultBlockState(), 3);
+                            cold.player.level().setBlock(cold.player.blockPosition().east(2),
+                                    Blocks.PACKED_ICE.defaultBlockState(), 3);
+                            h.runAfterDelay(110, () -> {
+                                try {
+                                    checkLocal(h, hot.player, hotAmbient, true);
+                                    checkLocal(h, cold.player, coldAmbient, false);
+                                    h.succeed();
+                                } finally { players.forEach(PlayerFixture::close); }
+                            });
+                        } catch (Throwable failure) {
+                            players.forEach(PlayerFixture::close);
+                            throw failure;
+                        }
                     });
                 } catch (Throwable failure) {
                     players.forEach(PlayerFixture::close);
@@ -84,14 +102,12 @@ public final class AmbientRateNativeGameTests {
                 "fixture-only biome override was not loaded");
         h.assertTrue(hot ? result.world > result.burn : result.world < result.freeze,
                 "biome fixture was not harmful; no valid native rate comparison");
-        h.assertTrue(Math.abs(result.body) < 3D,
-                "body moved too far during the first 240 ticks of native harmful exposure");
         h.assertTrue(Double.isFinite(result.rateInput) && Double.isFinite(result.rateOutput)
                 && (hot ? result.rateInput > 0 : result.rateInput < 0), "native RATE did not follow harmful WORLD exposure");
         return result;
     }
 
-    private static void check(GameTestHelper h, ServerPlayer player, Reading before, boolean hot) {
+    private static Reading check(GameTestHelper h, ServerPlayer player, Reading before, boolean hot) {
         Reading after = read(h, player, hot);
         double nativeRate = Math.abs(after.rateInput);
         double scaledRate = Math.abs(after.rateOutput);
@@ -106,6 +122,23 @@ public final class AmbientRateNativeGameTests {
                 "ambient rate did not approach the 72,000-tick damage-onset target");
         h.assertTrue(bodyPerTick >= targetPerTick * 0.35 && bodyPerTick <= targetPerTick * 2.0,
                 "actual body trajectory did not follow the scaled RATE over this short window");
+        return after;
+    }
+
+    private static void checkLocal(GameTestHelper h, ServerPlayer player, Reading ambient, boolean hot) {
+        Reading withSource = read(h, player, hot);
+        System.out.printf(Locale.ROOT, "BSP_THERMAL_LOCAL side=%s ambientWorld=%.6f sourceWorld=%.6f ambientRate=%.8f sourceRate=%.8f nativeRate=%.8f%n",
+                hot ? "hot" : "cold", ambient.world, withSource.world,
+                ambient.rateOutput, withSource.rateOutput, withSource.rateInput);
+        h.assertTrue(hot ? withSource.world > ambient.world + 0.01D
+                         : withSource.world < ambient.world - 0.01D,
+                "fixture block did not produce a measurable local WORLD emission");
+        h.assertTrue(Math.abs(withSource.rateOutput) > Math.abs(ambient.rateOutput) * 2D,
+                "local source did not increase harmful RATE smoothly above ambient pace");
+        h.assertTrue(Math.abs(withSource.rateOutput) < Math.abs(withSource.rateInput) * 0.9D,
+                "weak local source switched harmful RATE back to full native speed");
+        h.assertTrue(hot ? withSource.body > ambient.body : withSource.body < ambient.body,
+                "body did not follow the source-adjusted harmful rate");
     }
 
     private static final class PlayerFixture implements AutoCloseable {

@@ -32,14 +32,16 @@ class AmbientRateSeamContractTest {
         }
     }
 
-    @Test void oppositeLocalSourcesCannotCancelTheirWayIntoAmbientOnlyScaling() throws Exception {
+    @Test void localProbeSequenceRetainsTheFinalWorldEvenWhenSourcesCancel() throws Exception {
         Class<?> frameClass = Class.forName("com.bettercontent.bettersurvivalphysiology.climate.AmbientRateSeam$Frame");
         var constructor = frameClass.getDeclaredConstructor();
         constructor.setAccessible(true);
         var accept = frameClass.getDeclaredMethod("accept", int.class, int.class, double.class);
         accept.setAccessible(true);
-        var sourceActive = frameClass.getDeclaredField("sourceActive");
-        sourceActive.setAccessible(true);
+        var ambient = frameClass.getDeclaredField("ambient");
+        ambient.setAccessible(true);
+        var previous = frameClass.getDeclaredField("previous");
+        previous.setAccessible(true);
         var complete = frameClass.getDeclaredField("complete");
         complete.setAccessible(true);
         var safe = frameClass.getDeclaredField("safe");
@@ -48,25 +50,27 @@ class AmbientRateSeamContractTest {
         for (int stage = 0; stage <= 3; stage++)
             accept.invoke(canceling, stage, 2, stage == 1 ? 2.0 : 1.0);
         assertTrue(complete.getBoolean(canceling) && safe.getBoolean(canceling));
-        assertTrue(sourceActive.getBoolean(canceling),
-                "heating followed by equal cooling must retain native RATE");
-        Object neutral = constructor.newInstance();
-        for (int stage = 0; stage <= 3; stage++) accept.invoke(neutral, stage, 2, 1.0);
-        assertTrue(complete.getBoolean(neutral) && safe.getBoolean(neutral));
-        assertFalse(sourceActive.getBoolean(neutral),
-                "zero local contributions may use the ambient-only rate if other guards pass");
+        assertEquals(1.0, ambient.getDouble(canceling));
+        assertEquals(1.0, previous.getDouble(canceling),
+                "equal opposite sources must produce zero net WORLD change, not a native-speed switch");
+        Object aiding = constructor.newInstance();
+        for (int stage = 0; stage <= 3; stage++)
+            accept.invoke(aiding, stage, 2, stage >= 1 ? 2.0 : 1.0);
+        assertTrue(complete.getBoolean(aiding) && safe.getBoolean(aiding));
+        assertEquals(2.0, previous.getDouble(aiding),
+                "local emissions must remain available to continuously weight the final rate");
     }
 
-    @Test void inventoryItemsAreLocalSourcesWithIndependentDeltaProbes() throws Exception {
+    @Test void inventoryItemsRemainClassifiedAsLocalWorldSources() throws Exception {
         String source = Files.readString(Path.of(
                 "src/main/java/com/bettercontent/bettersurvivalphysiology/climate/AmbientRateSeam.java"));
         String local = source.substring(source.indexOf("private static boolean local("), source.indexOf("private static String signature("));
         assertTrue(local.contains("type == InventoryItemsTempModifier.class"),
-                "carried heating/cooling must not be misclassified as ambient");
-        assertTrue(source.contains("sourceActive |= Math.abs(value - previous) > EPS"),
-                "each local contribution must be checked before another local can cancel it");
-        assertTrue(source.contains("frame.sourceActive) return nativeRate"),
-                "active local sources must retain native rate");
+                "carried heating/cooling must contribute to final WORLD, not ambient baseline");
+        assertTrue(source.contains("frame.ambient, frame.previous"),
+                "the computed ambient and final WORLD values must both reach the rate calculation");
+        assertFalse(source.contains("frame.sourceActive) return nativeRate"),
+                "any nearby weak source must no longer switch immediately to native rate");
         assertTrue(source.contains("!local(list.get(index))"),
                 "the live modifier list must reject unknown sources after installation");
         assertTrue(source.contains("original.stream().anyMatch(WorldProbe.class::isInstance)")

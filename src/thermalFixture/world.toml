@@ -2,3 +2,8 @@
 # Cold Sweat's native damage bounds without changing BODY/CORE/RATE or the pack.
 [Biomes]
 "Biome Temperatures" = [["minecraft:desert", 80, 80, "c"], ["minecraft:snowy_plains", -80, -80, "c"]]
+
+# Only disposable fixture emissions; the pack's source strengths are not rewritten.
+[Blocks]
+"Block Temperatures" = [["minecraft:magma_block", 10, 3, "c", 50],
+                        ["minecraft:packed_ice", -10, 3, "c", 50, "", "", -200]]
